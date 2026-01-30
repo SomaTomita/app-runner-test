@@ -1,0 +1,100 @@
+Diagram:
+  DefinitionFiles:
+    - Type: URL
+      Url: "https://raw.githubusercontent.com/awslabs/diagram-as-code/main/definitions/definition-for-aws-icons-light.yaml"
+
+  Resources:
+    Canvas:
+      Type: AWS::Diagram::Canvas
+      Direction: horizontal
+      Children:
+        - User
+        - AWSCloud
+
+    User:
+      Type: AWS::Diagram::Resource
+      Preset: User
+
+    AWSCloud:
+      Type: AWS::Diagram::Cloud
+      Preset: AWSCloudNoLogo
+      Direction: vertical
+      Align: center
+      Children:
+        - CDNStack
+        - AppRunnerStack
+        - VPC
+
+    # --- Frontend (CDN) ---
+    CDNStack:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - CloudFront
+        - S3
+
+    CloudFront:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon CloudFront"
+
+    S3:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon Simple Storage Service (Amazon S3)"
+
+    # --- App Runner + S3 Images ---
+    AppRunnerStack:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - AppRunner
+        - S3Images
+
+    AppRunner:
+      Type: AWS::Diagram::Resource
+      Preset: "AWS App Runner"
+
+    S3Images:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon Simple Storage Service (Amazon S3)"
+
+    # --- VPC ---
+    VPC:
+      Type: AWS::EC2::VPC
+      Children:
+        - PrivateSubnet
+
+    PrivateSubnet:
+      Type: AWS::EC2::Subnet
+      Preset: PrivateSubnet
+      Children:
+        - RDS
+
+    RDS:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon Relational Database Service (Amazon RDS)"
+
+  Links:
+    - Source: User
+      Target: CloudFront
+      TargetArrowHead:
+        Type: Open
+    - Source: User
+      Target: AppRunner
+      TargetArrowHead:
+        Type: Open
+    - Source: CloudFront
+      Target: S3
+      TargetArrowHead:
+        Type: Open
+    - Source: AppRunner
+      Target: RDS
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        TargetRight:
+          Title: "VPC Connector"
+    - Source: AppRunner
+      Target: S3Images
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        TargetRight:
+          Title: "S3 Gateway Endpoint"

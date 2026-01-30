@@ -1,0 +1,131 @@
+Diagram:
+  DefinitionFiles:
+    - Type: URL
+      Url: "https://raw.githubusercontent.com/awslabs/diagram-as-code/main/definitions/definition-for-aws-icons-light.yaml"
+
+  Resources:
+    Canvas:
+      Type: AWS::Diagram::Canvas
+      Direction: horizontal
+      Children:
+        - User
+        - AWSCloud
+
+    User:
+      Type: AWS::Diagram::Resource
+      Preset: User
+
+    AWSCloud:
+      Type: AWS::Diagram::Cloud
+      Preset: AWSCloudNoLogo
+      Direction: vertical
+      Align: center
+      Children:
+        - CDNStack
+        - S3Images
+        - VPC
+
+    # --- Frontend (CDN) ---
+    CDNStack:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - CloudFront
+        - S3
+
+    CloudFront:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon CloudFront"
+
+    S3:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon Simple Storage Service (Amazon S3)"
+
+    # --- S3 Images ---
+    S3Images:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon Simple Storage Service (Amazon S3)"
+
+    # --- VPC ---
+    VPC:
+      Type: AWS::EC2::VPC
+      Direction: vertical
+      Children:
+        - PublicSubnetStack
+        - PrivateSubnet
+      BorderChildren:
+        - Position: W
+          Resource: IGW
+
+    PublicSubnetStack:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - PublicSubnet1
+        - PublicSubnet2
+
+    PublicSubnet1:
+      Type: AWS::EC2::Subnet
+      Preset: PublicSubnet
+      Children:
+        - ALB
+
+    PublicSubnet2:
+      Type: AWS::EC2::Subnet
+      Preset: PublicSubnet
+      Children:
+        - ECSFargate
+
+    ALB:
+      Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+      Preset: Application Load Balancer
+
+    ECSFargate:
+      Type: AWS::Diagram::Resource
+      Preset: "AWS Fargate"
+
+    PrivateSubnet:
+      Type: AWS::EC2::Subnet
+      Preset: PrivateSubnet
+      Children:
+        - RDS
+
+    RDS:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon Relational Database Service (Amazon RDS)"
+
+    IGW:
+      Type: AWS::EC2::InternetGateway
+
+  Links:
+    - Source: User
+      Target: CloudFront
+      TargetArrowHead:
+        Type: Open
+    - Source: User
+      Target: IGW
+      TargetArrowHead:
+        Type: Open
+    - Source: CloudFront
+      Target: S3
+      TargetArrowHead:
+        Type: Open
+    - Source: IGW
+      SourcePosition: N
+      Target: ALB
+      TargetPosition: S
+      TargetArrowHead:
+        Type: Open
+    - Source: ALB
+      Target: ECSFargate
+      TargetArrowHead:
+        Type: Open
+    - Source: ECSFargate
+      Target: RDS
+      TargetArrowHead:
+        Type: Open
+    - Source: ECSFargate
+      Target: S3Images
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        TargetRight:
+          Title: "S3 Gateway Endpoint"
