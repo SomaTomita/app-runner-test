@@ -10,6 +10,7 @@ ALB+ECS(Fargate) と App Runner を Terraform 変数1つで切り替えて比較
 | Backend  | Node.js + Express + TypeScript |
 | Auth     | Clerk (Google OAuth)           |
 | DB       | PostgreSQL (RDS) + Prisma      |
+| State    | zustand                        |
 | Testing  | Vitest + React Testing Library |
 | IaC      | Terraform                      |
 | CI/CD    | GitHub Actions                 |
