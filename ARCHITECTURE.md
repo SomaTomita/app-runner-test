@@ -15,6 +15,7 @@ ALB+ECS(Fargate) と App Runner の2つのデプロイ方式を、Terraform変�
 | Authentication     | Clerk (Google OAuth)           |
 | ORM                | Prisma                         |
 | Database           | PostgreSQL (RDS)               |
+| State Management   | zustand                        |
 | IaC                | Terraform                      |
 | Testing            | Vitest + React Testing Library |
 | CI/CD              | GitHub Actions                 |
@@ -31,17 +32,27 @@ app-runner-test/
 │   │   ├── App.tsx
 │   │   ├── App.test.tsx            # App component test
 │   │   ├── main.tsx
+│   │   ├── vite-env.d.ts           # Vite type declarations
 │   │   ├── test/
 │   │   │   └── setup.ts            # Test setup (jsdom, cleanup)
 │   │   ├── api/
-│   │   │   └── client.ts           # axios wrapper
+│   │   │   └── client.ts           # axios wrapper + Clerk token
+│   │   ├── services/
+│   │   │   ├── userService.ts      # User API calls
+│   │   │   └── imageService.ts     # Image API calls
+│   │   ├── stores/
+│   │   │   ├── useUserStore.ts     # zustand: user state
+│   │   │   └── useImageStore.ts    # zustand: image state
 │   │   ├── components/
+│   │   │   ├── AuthGuard.tsx       # Clerk auth wrapper
 │   │   │   ├── UserList.tsx
 │   │   │   ├── UserList.test.tsx    # Component test
-│   │   │   └── AuthGuard.tsx       # Clerk auth wrapper
+│   │   │   ├── ImageGallery.tsx     # Image grid display
+│   │   │   └── ImageGallery.test.tsx
 │   │   └── types/
 │   │       └── index.ts
 │   ├── index.html
+│   ├── vite.config.ts              # Vite config (API proxy)
 │   ├── vitest.config.ts            # Vitest config (jsdom environment)
 │   ├── tsconfig.json
 │   ├── package.json
@@ -51,19 +62,31 @@ app-runner-test/
 │   ├── src/
 │   │   ├── app.ts               # Express app setup
 │   │   ├── server.ts            # Server entry point
+│   │   ├── config/
+│   │   │   └── index.ts         # Centralized config from env
 │   │   ├── routes/
 │   │   │   ├── index.ts
 │   │   │   ├── health.ts        # Health check endpoint
 │   │   │   ├── health.test.ts   # Health endpoint test
 │   │   │   ├── users.ts         # CRUD endpoint
-│   │   │   └── users.test.ts    # Users endpoint test
+│   │   │   ├── users.test.ts    # Users endpoint test
+│   │   │   ├── images.ts        # Image list + presigned URL
+│   │   │   └── images.test.ts   # Images endpoint test
+│   │   ├── services/
+│   │   │   ├── UserService.ts   # User CRUD class
+│   │   │   └── storage/
+│   │   │       ├── StorageService.ts       # Abstract base class
+│   │   │       ├── LocalStorageService.ts  # Local filesystem
+│   │   │       ├── S3StorageService.ts     # AWS S3
+│   │   │       └── index.ts               # Factory
 │   │   ├── middleware/
 │   │   │   ├── errorHandler.ts
 │   │   │   ├── logger.ts        # Structured JSON logging
 │   │   │   ├── cors.ts
 │   │   │   └── auth.ts          # Clerk JWT verification
 │   │   └── lib/
-│   │       └── prisma.ts        # Prisma client singleton
+│   │       ├── prisma.ts        # Prisma client singleton
+│   │       └── errors.ts        # AppError class
 │   ├── prisma/
 │   │   ├── schema.prisma
 │   │   └── seed.ts
@@ -182,10 +205,22 @@ app-runner-test/
 
 - App Runner が HTTPS 終端・LB を担当
 - 自動スケーリング内蔵
-- VPC Connector で RDS に接続
-- S3 Gateway Endpoint 経由で画像用 S3 バケットにアクセス (NAT Gateway 不要)
-- 外部 API (Clerk等) にはネイティブにアクセス可能 (NAT Gateway 不要)
+- VPC Connector (`egress_type = "VPC"`) で RDS に接続
+- `egress_type = "VPC"` は全送信トラフィックを VPC 経由にするため、外部 API (Clerk等) へのアクセスに **NAT が必要**
+- Public Subnet の EC2 (deployer) が NAT を兼務 (`ip_forward` + `iptables MASQUERADE`)
+- S3 Gateway Endpoint 経由で画像用 S3 バケットにアクセス
 - マネージドサービスのため運用が楽
+
+#### App Runner → 外部 API パケットフロー
+
+```
+App Runner → VPC Connector (private subnet ENI)
+  → Route Table: 0.0.0.0/0 → EC2 NAT の ENI
+  → EC2 (deployer + NAT): MASQUERADE で SNAT
+  → IGW → Clerk API
+
+戻り: Clerk → IGW → EC2 (conntrack で reverse SNAT) → VPC Connector → App Runner
+```
 
 ### 切り替え方法
 
@@ -197,7 +232,7 @@ deploy_mode = "ecs"       # ALB + ECS Fargate
 
 Terraform の `count` / `for_each` で deploy_mode に応じてリソースを作成/スキップ。
 
-> **Note:** どちらのモードも NAT Gateway 不要。ECS は Public IP で、App Runner はネイティブに外部 API へアクセス可能。
+> **Note:** ECS モードは Public IP 付与により NAT 不要。App Runner モードは `egress_type = "VPC"` で全トラフィックが VPC 経由となるため、EC2 (deployer) が NAT を兼務 (追加コスト ~$4/月)。
 
 ---
 
@@ -290,6 +325,7 @@ fields @timestamp, method, path, responseTime
 | Resource              | Description                  |
 | --------------------- | ---------------------------- |
 | VPC                    | 2 AZ, public/private subnets   |
+| NAT Gateway            | App Runner モード時のみ (単一 AZ) |
 | S3 Gateway Endpoint    | VPC 内から S3 へのプライベート接続 |
 | RDS PostgreSQL         | db.t3.micro (テスト用)         |
 | ECR                    | Backend image repository       |
@@ -344,10 +380,11 @@ model User {
 | ------------- | -------------------- | --------------------------------------- |
 | Compute       | vCPU/Memory 秒課金   | vCPU/Memory 秒課金 + プロビジョニング料 |
 | LB            | ALB ~$16/月 + LCU    | 込み (無料)                             |
-| 最小コスト/月 | ALB + 1 task = ~$30~ | idle 時 ~$5~                            |
+| NAT (EC2)     | 不要                 | ~$4/月 (deployer EC2 兼用, t3.nano)     |
+| 最小コスト/月 | ALB + 1 task = ~$30~ | idle 時 ~$9~ (EC2 NAT 含む)             |
 | スケール時    | タスク数で線形増     | 自動スケール                            |
 
-**結論**: テスト・小規模なら App Runner が最安。ECS は ALB 固定費のみ。どちらも NAT Gateway 不要。
+**結論**: ECS は ALB 固定費のみ。App Runner は deployer EC2 が NAT を兼務するため追加コストは最小限、compute は idle 時ほぼ無料。
 
 ### 2. Scaling (スケーリング)
 
@@ -362,6 +399,8 @@ model User {
 | ------------------ | ------------------------------------------------ |
 | `DATABASE_URL`     | ECS: タスク定義の環境変数 / App Runner: 環境変数 |
 | `CLERK_SECRET_KEY` | ECS: タスク定義の環境変数 / App Runner: 環境変数 |
+| `STORAGE_TYPE`     | `local` (開発) / `s3` (本番) -- 画像ストレージ切替 |
+| `S3_IMAGES_BUCKET` | 画像用 S3 バケット名 (本番時)                    |
 
 - Terraform で `sensitive = true` を付与し、`terraform.tfvars` で値を渡す
 - CI/CD では GitHub Actions Secrets に格納 → デプロイ時に注入
@@ -379,7 +418,9 @@ model User {
 | ALB SG      | `0.0.0.0/0` → port 80/443                           | All        |
 | ECS Task SG | ALB SG → port 3000                                  | All        |
 | RDS SG      | ECS Task SG → port 5432 / App Runner VPC Connector SG → port 5432 | Deny (default) |
+| Deployer SG | VPC Connector SG → all (NAT) / SSH → port 22                     | All            |
 
+- Deployer EC2 は SSM Session Manager で管理 (`AmazonSSMManagedInstanceCore` ポリシー付与済み)。SSH はデフォルト無効 (`ssh_allowed_cidrs = []`)
 - ECS タスクは public subnet に配置 (Public IP) → SG で ALB からのみ受け入れ
 - App Runner は VPC Connector で private subnet の RDS に接続
 - S3 (Frontend) は OAC (Origin Access Control) で CloudFront 経由のみアクセス許可
@@ -459,10 +500,15 @@ npm test              # vitest run
 npm run test:watch    # vitest (watch mode)
 ```
 
+**Frontend アーキテクチャ:**
+- **zustand** で状態管理 (`stores/`)
+- **services/** で API 呼び出しを集約 (コンポーネントから分離)
+- データフロー: Component → Store (action) → Service (API call) → Store (state update) → Component (re-render)
+
 **Frontend テスト方針:**
 - コンポーネントのレンダリング・ユーザー操作をテスト
-- API 呼び出しは msw (Mock Service Worker) でモック
-- `src/test/setup.ts` で jsdom 環境のセットアップ
+- zustand store / service を `vi.mock` でモック
+- `src/test/setup.ts` で jsdom 環境のセットアップ + Clerk モック
 
 **Backend テスト方針:**
 - supertest で Express ルートの統合テスト
@@ -535,6 +581,22 @@ terraform {
 - [ ] Backend の CORS 許可オリジンに CloudFront ドメインを設定
 - [ ] Clerk の Allowed origins に CloudFront ドメインを追加
 - [ ] 動作確認 (ヘルスチェック、認証フロー、CRUD)
+
+---
+
+## テスト環境特有の仕様 (本番移行時の変更点)
+
+本プロジェクトは比較検証用のため、以下のコスト・簡略化のためのトレードオフがある。
+
+| 項目 | テスト環境 (現状) | 本番で必要な対応 |
+|------|-------------------|------------------|
+| シークレット管理 | ECS/App Runner の環境変数に平文で渡す | Secrets Manager or SSM Parameter Store に移行 |
+| HTTPS | ALB は HTTP:80 のみ。App Runner は標準で HTTPS | ACM 証明書 + HTTPS リスナー + HTTP→HTTPS リダイレクト |
+| SSH | deployer EC2 の SSH はデフォルト無効 (`ssh_allowed_cidrs = []`) | SSM Session Manager の利用を推奨 |
+| RDS | db.t3.micro, Single-AZ, `skip_final_snapshot = true`, backup 7日 | Multi-AZ, `skip_final_snapshot = false`, backup 30日 |
+| NAT | EC2 (deployer) が NAT を兼務 (単一インスタンス, 冗長性なし) | マネージド NAT Gateway or 複数 AZ 構成 |
+| CloudWatch | アラーム定義済だが通知先 (SNS) はオプション | `alarm_sns_topic_arn` を設定して通知有効化 |
+| ECS タスク配置 | Public Subnet + Public IP (NAT 不要でコスト削減) | Private Subnet + NAT Gateway が望ましい |
 
 ---
 

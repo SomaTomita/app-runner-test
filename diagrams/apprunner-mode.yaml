@@ -10,10 +10,17 @@ Diagram:
       Children:
         - User
         - AWSCloud
+        - ExternalAPI
 
     User:
       Type: AWS::Diagram::Resource
       Preset: User
+
+    # --- External API (Clerk) ---
+    ExternalAPI:
+      Type: AWS::Diagram::Resource
+      Preset: ThirdPartyService
+      Title: "External API (Clerk)"
 
     AWSCloud:
       Type: AWS::Diagram::Cloud
@@ -35,10 +42,12 @@ Diagram:
     CloudFront:
       Type: AWS::Diagram::Resource
       Preset: "Amazon CloudFront"
+      Title: "CloudFront"
 
     S3:
       Type: AWS::Diagram::Resource
       Preset: "Amazon Simple Storage Service (Amazon S3)"
+      Title: "S3"
 
     # --- App Runner + S3 Images ---
     AppRunnerStack:
@@ -50,16 +59,31 @@ Diagram:
     AppRunner:
       Type: AWS::Diagram::Resource
       Preset: "AWS App Runner"
+      Title: "App Runner"
 
     S3Images:
       Type: AWS::Diagram::Resource
       Preset: "Amazon Simple Storage Service (Amazon S3)"
+      Title: "S3 (Images)"
 
     # --- VPC ---
     VPC:
       Type: AWS::EC2::VPC
+      Direction: vertical
       Children:
+        - PublicSubnet
         - PrivateSubnet
+
+    PublicSubnet:
+      Type: AWS::EC2::Subnet
+      Preset: PublicSubnet
+      Children:
+        - Deployer
+
+    Deployer:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon Elastic Compute Cloud (Amazon EC2)"
+      Title: "EC2 (deployer + NAT)"
 
     PrivateSubnet:
       Type: AWS::EC2::Subnet
@@ -70,6 +94,7 @@ Diagram:
     RDS:
       Type: AWS::Diagram::Resource
       Preset: "Amazon Relational Database Service (Amazon RDS)"
+      Title: "RDS"
 
   Links:
     - Source: User
@@ -98,3 +123,14 @@ Diagram:
       Labels:
         TargetRight:
           Title: "S3 Gateway Endpoint"
+    - Source: AppRunner
+      Target: Deployer
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        TargetRight:
+          Title: "VPC (egress)"
+    - Source: Deployer
+      Target: ExternalAPI
+      TargetArrowHead:
+        Type: Open

@@ -25,6 +25,7 @@ services:
       DATABASE_URL: postgresql://devuser:devpass@db:5432/apprunner_dev
       STORAGE_TYPE: local
       PORT: "3000"
+      NODE_ENV: development
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules

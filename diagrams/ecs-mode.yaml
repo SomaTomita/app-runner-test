@@ -10,10 +10,17 @@ Diagram:
       Children:
         - User
         - AWSCloud
+        - ExternalAPI
 
     User:
       Type: AWS::Diagram::Resource
       Preset: User
+
+    # --- External API (Clerk) ---
+    ExternalAPI:
+      Type: AWS::Diagram::Resource
+      Preset: ThirdPartyService
+      Title: "External API (Clerk)"
 
     AWSCloud:
       Type: AWS::Diagram::Cloud
@@ -35,52 +42,46 @@ Diagram:
     CloudFront:
       Type: AWS::Diagram::Resource
       Preset: "Amazon CloudFront"
+      Title: "CloudFront"
 
     S3:
       Type: AWS::Diagram::Resource
       Preset: "Amazon Simple Storage Service (Amazon S3)"
+      Title: "S3"
 
     # --- S3 Images ---
     S3Images:
       Type: AWS::Diagram::Resource
       Preset: "Amazon Simple Storage Service (Amazon S3)"
+      Title: "S3 (Images)"
 
     # --- VPC ---
     VPC:
       Type: AWS::EC2::VPC
       Direction: vertical
       Children:
-        - PublicSubnetStack
+        - PublicSubnet
         - PrivateSubnet
       BorderChildren:
         - Position: W
           Resource: IGW
 
-    PublicSubnetStack:
-      Type: AWS::Diagram::HorizontalStack
-      Children:
-        - PublicSubnet1
-        - PublicSubnet2
-
-    PublicSubnet1:
+    PublicSubnet:
       Type: AWS::EC2::Subnet
       Preset: PublicSubnet
       Children:
         - ALB
-
-    PublicSubnet2:
-      Type: AWS::EC2::Subnet
-      Preset: PublicSubnet
-      Children:
         - ECSFargate
 
     ALB:
       Type: AWS::ElasticLoadBalancingV2::LoadBalancer
       Preset: Application Load Balancer
+      Title: "ALB"
 
     ECSFargate:
       Type: AWS::Diagram::Resource
       Preset: "AWS Fargate"
+      Title: "ECS Fargate"
 
     PrivateSubnet:
       Type: AWS::EC2::Subnet
@@ -91,6 +92,7 @@ Diagram:
     RDS:
       Type: AWS::Diagram::Resource
       Preset: "Amazon Relational Database Service (Amazon RDS)"
+      Title: "RDS"
 
     IGW:
       Type: AWS::EC2::InternetGateway
@@ -109,9 +111,7 @@ Diagram:
       TargetArrowHead:
         Type: Open
     - Source: IGW
-      SourcePosition: N
       Target: ALB
-      TargetPosition: S
       TargetArrowHead:
         Type: Open
     - Source: ALB
@@ -129,3 +129,7 @@ Diagram:
       Labels:
         TargetRight:
           Title: "S3 Gateway Endpoint"
+    - Source: ECSFargate
+      Target: ExternalAPI
+      TargetArrowHead:
+        Type: Open

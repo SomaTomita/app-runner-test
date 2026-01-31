@@ -133,6 +133,8 @@ cd terraform
 terraform plan                    # 差分確認
 terraform apply                   # デプロイ
 terraform destroy                 # 全削除
+aws ssm start-session \
+  --target $(terraform output -raw deployer_instance_id)  # Deployer EC2 に接続
 
 # Sample images を S3 にアップロード
 ./scripts/upload-images.sh <S3_BUCKET_NAME>
