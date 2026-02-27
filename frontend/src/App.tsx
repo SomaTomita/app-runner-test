@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { setTokenGetter } from "./api/client";
 import { AuthGuard } from "./components/AuthGuard";
 import { UserList } from "./components/UserList";
-import { ImageGallery } from "./components/ImageGallery";
+
+const ImageGallery = lazy(() => import("./components/ImageGallery"));
 
 function App() {
   const { getToken } = useAuth();
@@ -15,7 +16,9 @@ function App() {
   return (
     <AuthGuard>
       <UserList />
-      <ImageGallery />
+      <Suspense fallback={<p>Loading...</p>}>
+        <ImageGallery />
+      </Suspense>
     </AuthGuard>
   );
 }

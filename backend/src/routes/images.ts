@@ -9,7 +9,7 @@ router.use(authMiddleware);
 
 router.get("/", async (_req, res, next) => {
   try {
-    const images = await storageService.listImages();
+    const images = await storageService.listImagesWithUrls();
     res.json(images);
   } catch (err) {
     next(err);

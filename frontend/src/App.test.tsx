@@ -15,9 +15,9 @@ describe("App", () => {
     expect(screen.getByText("Users")).toBeInTheDocument();
   });
 
-  it("renders Images section", () => {
+  it("renders Images section", async () => {
     render(<App />);
 
-    expect(screen.getByText("Images")).toBeInTheDocument();
+    expect(await screen.findByText("Images")).toBeInTheDocument();
   });
 });

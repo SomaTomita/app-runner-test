@@ -26,7 +26,9 @@ const mockStore = {
 
 describe("UserList", () => {
   beforeEach(() => {
-    vi.mocked(useUserStore).mockReturnValue(mockStore);
+    vi.mocked(useUserStore).mockImplementation((selector: any) =>
+      selector(mockStore),
+    );
   });
 
   it("renders user list", () => {
@@ -43,11 +45,9 @@ describe("UserList", () => {
   });
 
   it("shows loading state", () => {
-    vi.mocked(useUserStore).mockReturnValue({
-      ...mockStore,
-      loading: true,
-      users: [],
-    });
+    vi.mocked(useUserStore).mockImplementation((selector: any) =>
+      selector({ ...mockStore, loading: true, users: [] }),
+    );
 
     render(<UserList />);
 
@@ -55,10 +55,9 @@ describe("UserList", () => {
   });
 
   it("shows error state", () => {
-    vi.mocked(useUserStore).mockReturnValue({
-      ...mockStore,
-      error: "Failed to fetch users",
-    });
+    vi.mocked(useUserStore).mockImplementation((selector: any) =>
+      selector({ ...mockStore, error: "Failed to fetch users" }),
+    );
 
     render(<UserList />);
 

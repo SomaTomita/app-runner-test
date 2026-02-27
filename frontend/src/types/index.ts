@@ -13,6 +13,10 @@ export interface ImageMeta {
   lastModified?: string;
 }
 
+export interface ImageWithUrl extends ImageMeta {
+  url: string;
+}
+
 export interface CreateUserInput {
   email: string;
   name: string;

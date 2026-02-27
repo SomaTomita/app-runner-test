@@ -5,3 +5,8 @@ coverage
 .env.local
 *.test.ts
 vitest.config.ts
+.git
+*.md
+.github
+.vscode
+docker-compose.yml

@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import type { User, CreateUserInput, UpdateUserInput } from "../types";
-import * as userService from "../services/userService";
+import {
+  fetchUsers as apiFetchUsers,
+  createUser as apiCreateUser,
+  updateUser as apiUpdateUser,
+  deleteUser as apiDeleteUser,
+} from "../services/userService";
 
 interface UserState {
   users: User[];
@@ -20,7 +25,7 @@ export const useUserStore = create<UserState>((set) => ({
   fetchUsers: async () => {
     set({ loading: true, error: null });
     try {
-      const users = await userService.fetchUsers();
+      const users = await apiFetchUsers();
       set({ users, loading: false });
     } catch (err) {
       set({ error: "Failed to fetch users", loading: false });
@@ -30,7 +35,7 @@ export const useUserStore = create<UserState>((set) => ({
   createUser: async (input) => {
     set({ error: null });
     try {
-      const user = await userService.createUser(input);
+      const user = await apiCreateUser(input);
       set((state) => ({ users: [user, ...state.users] }));
     } catch (err) {
       set({ error: "Failed to create user" });
@@ -40,7 +45,7 @@ export const useUserStore = create<UserState>((set) => ({
   updateUser: async (id, input) => {
     set({ error: null });
     try {
-      const updated = await userService.updateUser(id, input);
+      const updated = await apiUpdateUser(id, input);
       set((state) => ({
         users: state.users.map((u) => (u.id === id ? updated : u)),
       }));
@@ -52,7 +57,7 @@ export const useUserStore = create<UserState>((set) => ({
   deleteUser: async (id) => {
     set({ error: null });
     try {
-      await userService.deleteUser(id);
+      await apiDeleteUser(id);
       set((state) => ({ users: state.users.filter((u) => u.id !== id) }));
     } catch (err) {
       set({ error: "Failed to delete user" });
