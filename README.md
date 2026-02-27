@@ -50,15 +50,14 @@ cp frontend/.env.example frontend/.env
 # VITE_CLERK_PUBLISHABLE_KEY, VITE_API_URL を設定
 
 # 4. DB + Backend 起動
-docker-compose up -d
+docker compose up -d
 
 # 5. DB マイグレーション & シード
-cd backend
-npx prisma migrate dev
-npx prisma db seed
+docker compose exec backend npx prisma migrate dev
+docker compose exec backend npx prisma db seed
 
 # 6. Frontend 起動
-cd ../frontend
+cd frontend
 npm install && npm run dev
 ```
 
@@ -96,10 +95,8 @@ terraform apply
 ```
 app-runner-test/
 ├── frontend/          # React + Vite
-├── backend/           # Express API + Prisma
+├── backend/           # Express API + Prisma (data/images/, scripts/ を含む)
 ├── terraform/         # IaC (modules: vpc, rds, ecr, ecs, apprunner, s3_cdn, s3_images, monitoring)
-├── data/images/       # Sample images for S3 upload
-├── scripts/           # Utility scripts
 ├── .github/workflows/ # CI/CD
 ├── diagrams/          # Architecture diagrams (awsdac)
 ├── docker-compose.yml # Local dev
@@ -110,8 +107,8 @@ app-runner-test/
 
 ```bash
 # ローカル開発
-docker-compose up -d              # DB + Backend
-docker-compose down               # 停止
+docker compose up -d              # DB + Backend
+docker compose down               # 停止
 
 # Backend
 cd backend
@@ -133,9 +130,11 @@ cd terraform
 terraform plan                    # 差分確認
 terraform apply                   # デプロイ
 terraform destroy                 # 全削除
+aws ssm start-session \
+  --target $(terraform output -raw deployer_instance_id)  # Deployer EC2 に接続
 
 # Sample images を S3 にアップロード
-./scripts/upload-images.sh <S3_BUCKET_NAME>
+./backend/scripts/upload-images.sh <S3_BUCKET_NAME>
 
 # Architecture diagrams
 awsdac diagrams/ecs-mode.yaml -o diagrams/ecs-mode.png

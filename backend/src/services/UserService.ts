@@ -1,4 +1,4 @@
-import { PrismaClient, User } from "@prisma/client";
+import { Prisma, PrismaClient, User } from "@prisma/client";
 import { AppError } from "../lib/errors";
 
 export class UserService {
@@ -24,12 +24,30 @@ export class UserService {
     id: number,
     data: { email?: string; name?: string },
   ): Promise<User> {
-    await this.findById(id);
-    return this.prisma.user.update({ where: { id }, data });
+    try {
+      return await this.prisma.user.update({ where: { id }, data });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2025"
+      ) {
+        throw new AppError(404, "User not found");
+      }
+      throw err;
+    }
   }
 
   async delete(id: number): Promise<void> {
-    await this.findById(id);
-    await this.prisma.user.delete({ where: { id } });
+    try {
+      await this.prisma.user.delete({ where: { id } });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2025"
+      ) {
+        throw new AppError(404, "User not found");
+      }
+      throw err;
+    }
   }
 }

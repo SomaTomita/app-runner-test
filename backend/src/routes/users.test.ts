@@ -98,7 +98,6 @@ describe("Users routes", () => {
   describe("PUT /api/users/:id", () => {
     it("updates a user", async () => {
       const updated = { ...mockUser, name: "Updated" };
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
       vi.mocked(prisma.user.update).mockResolvedValue(updated);
 
       const res = await request(app)
@@ -112,7 +111,6 @@ describe("Users routes", () => {
 
   describe("DELETE /api/users/:id", () => {
     it("deletes a user", async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
       vi.mocked(prisma.user.delete).mockResolvedValue(mockUser);
 
       const res = await request(app).delete("/api/users/1");

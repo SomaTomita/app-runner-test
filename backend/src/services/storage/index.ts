@@ -11,4 +11,4 @@ export function createStorageService(): StorageService {
 }
 
 export { StorageService, LocalStorageService, S3StorageService };
-export type { ImageMeta } from "./StorageService";
+export type { ImageMeta, ImageWithUrl } from "./StorageService";

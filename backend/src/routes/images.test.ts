@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import request from "supertest";
 import express from "express";
 
-const { mockListImages, mockGetImageUrl } = vi.hoisted(() => ({
-  mockListImages: vi.fn(),
+const { mockListImagesWithUrls, mockGetImageUrl } = vi.hoisted(() => ({
+  mockListImagesWithUrls: vi.fn(),
   mockGetImageUrl: vi.fn(),
 }));
 
@@ -14,7 +14,7 @@ vi.mock("@clerk/express", () => ({
 
 vi.mock("../services/storage", () => ({
   createStorageService: () => ({
-    listImages: mockListImages,
+    listImagesWithUrls: mockListImagesWithUrls,
     getImageUrl: mockGetImageUrl,
   }),
 }));
@@ -28,9 +28,14 @@ app.use(errorHandler);
 
 describe("Images routes", () => {
   describe("GET /api/images", () => {
-    it("returns image list", async () => {
-      mockListImages.mockResolvedValue([
-        { key: "photo.jpg", name: "photo.jpg", size: 1024 },
+    it("returns image list with urls", async () => {
+      mockListImagesWithUrls.mockResolvedValue([
+        {
+          key: "photo.jpg",
+          name: "photo.jpg",
+          size: 1024,
+          url: "http://localhost:3000/static/images/photo.jpg",
+        },
       ]);
 
       const res = await request(app).get("/api/images");
@@ -38,10 +43,11 @@ describe("Images routes", () => {
       expect(res.status).toBe(200);
       expect(res.body).toHaveLength(1);
       expect(res.body[0].key).toBe("photo.jpg");
+      expect(res.body[0].url).toContain("photo.jpg");
     });
 
     it("returns empty array when no images", async () => {
-      mockListImages.mockResolvedValue([]);
+      mockListImagesWithUrls.mockResolvedValue([]);
 
       const res = await request(app).get("/api/images");
 

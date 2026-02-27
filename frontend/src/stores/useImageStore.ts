@@ -1,14 +1,9 @@
 import { create } from "zustand";
-import type { ImageMeta } from "../types";
-import * as imageService from "../services/imageService";
-
-interface ImageItem {
-  meta: ImageMeta;
-  url: string | null;
-}
+import type { ImageWithUrl } from "../types";
+import { fetchImages } from "../services/imageService";
 
 interface ImageState {
-  images: ImageItem[];
+  images: ImageWithUrl[];
   loading: boolean;
   error: string | null;
   fetchImages: () => Promise<void>;
@@ -22,13 +17,7 @@ export const useImageStore = create<ImageState>((set) => ({
   fetchImages: async () => {
     set({ loading: true, error: null });
     try {
-      const metas = await imageService.fetchImages();
-      const images = await Promise.all(
-        metas.map(async (meta) => {
-          const url = await imageService.getImageUrl(meta.key);
-          return { meta, url };
-        }),
-      );
+      const images = await fetchImages();
       set({ images, loading: false });
     } catch (err) {
       set({ error: "Failed to fetch images", loading: false });

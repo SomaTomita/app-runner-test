@@ -15,7 +15,9 @@ const mockStore = {
 
 describe("ImageGallery", () => {
   beforeEach(() => {
-    vi.mocked(useImageStore).mockReturnValue(mockStore);
+    vi.mocked(useImageStore).mockImplementation((selector: any) =>
+      selector(mockStore),
+    );
   });
 
   it("renders empty state", () => {
@@ -36,10 +38,9 @@ describe("ImageGallery", () => {
   });
 
   it("shows loading state", () => {
-    vi.mocked(useImageStore).mockReturnValue({
-      ...mockStore,
-      loading: true,
-    });
+    vi.mocked(useImageStore).mockImplementation((selector: any) =>
+      selector({ ...mockStore, loading: true }),
+    );
 
     render(<ImageGallery />);
 
@@ -47,10 +48,9 @@ describe("ImageGallery", () => {
   });
 
   it("shows error state", () => {
-    vi.mocked(useImageStore).mockReturnValue({
-      ...mockStore,
-      error: "Failed to fetch images",
-    });
+    vi.mocked(useImageStore).mockImplementation((selector: any) =>
+      selector({ ...mockStore, error: "Failed to fetch images" }),
+    );
 
     render(<ImageGallery />);
 
@@ -58,15 +58,19 @@ describe("ImageGallery", () => {
   });
 
   it("renders images when loaded", () => {
-    vi.mocked(useImageStore).mockReturnValue({
-      ...mockStore,
-      images: [
-        {
-          meta: { key: "photo.jpg", name: "photo.jpg", size: 2048 },
-          url: "http://localhost:3000/static/images/photo.jpg",
-        },
-      ],
-    });
+    vi.mocked(useImageStore).mockImplementation((selector: any) =>
+      selector({
+        ...mockStore,
+        images: [
+          {
+            key: "photo.jpg",
+            name: "photo.jpg",
+            size: 2048,
+            url: "http://localhost:3000/static/images/photo.jpg",
+          },
+        ],
+      }),
+    );
 
     render(<ImageGallery />);
 
