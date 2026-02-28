@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient, User } from "@prisma/client";
+import { Prisma, PrismaClient, User } from "../generated/prisma/client";
 import { AppError } from "../lib/errors";
 
 export class UserService {
@@ -26,7 +26,7 @@ export class UserService {
   ): Promise<User> {
     try {
       return await this.prisma.user.update({ where: { id }, data });
-    } catch (err) {
+    } catch (err: unknown) {
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === "P2025"
@@ -40,7 +40,7 @@ export class UserService {
   async delete(id: number): Promise<void> {
     try {
       await this.prisma.user.delete({ where: { id } });
-    } catch (err) {
+    } catch (err: unknown) {
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === "P2025"

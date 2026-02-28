@@ -6,6 +6,7 @@ COPY package*.json ./
 RUN npm ci
 
 COPY prisma ./prisma
+COPY prisma.config.ts ./
 RUN npx prisma generate
 
 COPY tsconfig.json ./
@@ -23,9 +24,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/dist ./dist
-COPY prisma/schema.prisma ./prisma/
 
 RUN chown -R appuser:nodejs /app
 USER appuser

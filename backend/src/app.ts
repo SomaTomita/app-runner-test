@@ -11,7 +11,9 @@ const app = express();
 app.use(express.json());
 app.use(corsMiddleware);
 app.use(logger);
-app.use(clerkMiddleware());
+if (process.env.CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY) {
+  app.use(clerkMiddleware());
+}
 
 if (config.storageType === "local") {
   app.use("/static/images", express.static(config.localImageDir));
