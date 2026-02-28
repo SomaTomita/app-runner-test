@@ -58,7 +58,9 @@ describe("Images routes", () => {
 
   describe("GET /api/images/:key", () => {
     it("returns image URL", async () => {
-      mockGetImageUrl.mockResolvedValue("http://localhost:3000/static/images/photo.jpg");
+      mockGetImageUrl.mockResolvedValue(
+        "http://localhost:3000/static/images/photo.jpg",
+      );
 
       const res = await request(app).get("/api/images/photo.jpg");
 

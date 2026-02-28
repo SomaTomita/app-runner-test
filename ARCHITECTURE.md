@@ -210,6 +210,7 @@ deploy_mode = "ecs"       # ALB + ECS Fargate
 Terraform の `count` / `for_each` で deploy_mode に応じてリソースを作成/スキップ。
 
 環境別の設定は `environments/` ディレクトリの tfvars ファイルで管理:
+
 ```bash
 terraform apply -var-file=environments/dev.tfvars
 terraform apply -var-file=environments/prod.tfvars
@@ -305,16 +306,16 @@ fields @timestamp, method, path, responseTime
 
 以下のリソースは deploy_mode に関係なく常に作成:
 
-| Resource              | Description                  |
-| --------------------- | ---------------------------- |
-| VPC                    | 2 AZ, public/private subnets   |
-| NAT (EC2 deployer)     | App Runner モード時のみ (EC2 が NAT 兼務, 単一 AZ) |
-| S3 Gateway Endpoint    | VPC 内から S3 へのプライベート接続 |
-| RDS PostgreSQL         | db.t3.micro (テスト用)         |
-| ECR                    | Backend image repository       |
-| S3 (Frontend)          | CloudFront + OAC               |
-| S3 (Images)            | 画像ストレージ                 |
-| CloudWatch Log Groups  | Monitoring                     |
+| Resource              | Description                                        |
+| --------------------- | -------------------------------------------------- |
+| VPC                   | 2 AZ, public/private subnets                       |
+| NAT (EC2 deployer)    | App Runner モード時のみ (EC2 が NAT 兼務, 単一 AZ) |
+| S3 Gateway Endpoint   | VPC 内から S3 へのプライベート接続                 |
+| RDS PostgreSQL        | db.t3.micro (テスト用)                             |
+| ECR                   | Backend image repository                           |
+| S3 (Frontend)         | CloudFront + OAC                                   |
+| S3 (Images)           | 画像ストレージ                                     |
+| CloudWatch Log Groups | Monitoring                                         |
 
 ---
 
@@ -322,15 +323,15 @@ fields @timestamp, method, path, responseTime
 
 Clerk 認証 + シンプルな CRUD:
 
-| Method | Path             | Auth     | Description    |
-| ------ | ---------------- | -------- | -------------- |
-| GET    | `/api/health`    | -        | ヘルスチェック |
-| GET    | `/api/users`     | Required | ユーザー一覧   |
-| GET    | `/api/users/:id` | Required | ユーザー詳細   |
-| POST   | `/api/users`     | Required | ユーザー作成   |
-| PUT    | `/api/users/:id` | Required | ユーザー更新   |
-| DELETE | `/api/users/:id` | Required | ユーザー削除   |
-| GET    | `/api/images`    | Required | 画像一覧 (S3)  |
+| Method | Path               | Auth     | Description                 |
+| ------ | ------------------ | -------- | --------------------------- |
+| GET    | `/api/health`      | -        | ヘルスチェック              |
+| GET    | `/api/users`       | Required | ユーザー一覧                |
+| GET    | `/api/users/:id`   | Required | ユーザー詳細                |
+| POST   | `/api/users`       | Required | ユーザー作成                |
+| PUT    | `/api/users/:id`   | Required | ユーザー更新                |
+| DELETE | `/api/users/:id`   | Required | ユーザー削除                |
+| GET    | `/api/images`      | Required | 画像一覧 (S3)               |
 | GET    | `/api/images/:key` | Required | 画像取得 (S3 presigned URL) |
 
 認証フロー:
@@ -378,12 +379,12 @@ model User {
 
 検証用途のため、環境変数で管理する。
 
-| Secret             | 管理方法                                         |
-| ------------------ | ------------------------------------------------ |
-| `DATABASE_URL`     | ECS: タスク定義の環境変数 / App Runner: 環境変数 |
-| `CLERK_SECRET_KEY` | ECS: タスク定義の環境変数 / App Runner: 環境変数 |
+| Secret             | 管理方法                                           |
+| ------------------ | -------------------------------------------------- |
+| `DATABASE_URL`     | ECS: タスク定義の環境変数 / App Runner: 環境変数   |
+| `CLERK_SECRET_KEY` | ECS: タスク定義の環境変数 / App Runner: 環境変数   |
 | `STORAGE_TYPE`     | `local` (開発) / `s3` (本番) -- 画像ストレージ切替 |
-| `S3_IMAGES_BUCKET` | 画像用 S3 バケット名 (本番時)                    |
+| `S3_IMAGES_BUCKET` | 画像用 S3 バケット名 (本番時)                      |
 
 - Terraform で `sensitive = true` を付与し、`TF_VAR_` 環境変数 or `-var` フラグで注入（`terraform.tfvars` は `.gitignore` で除外）
 - CI/CD では GitHub Actions Secrets に格納 → デプロイ時に注入
@@ -396,12 +397,12 @@ model User {
 
 **Security Group ルール:**
 
-| SG          | Inbound                                              | Outbound   |
-| ----------- | ---------------------------------------------------- | ---------- |
-| ALB SG      | `0.0.0.0/0` → port 80/443                           | All        |
-| ECS Task SG | ALB SG → port 3000                                  | All        |
+| SG          | Inbound                                                           | Outbound       |
+| ----------- | ----------------------------------------------------------------- | -------------- |
+| ALB SG      | `0.0.0.0/0` → port 80/443                                         | All            |
+| ECS Task SG | ALB SG → port 3000                                                | All            |
 | RDS SG      | ECS Task SG → port 5432 / App Runner VPC Connector SG → port 5432 | Deny (default) |
-| Deployer SG | VPC Connector SG → all (NAT) / SSH → port 22                     | All            |
+| Deployer SG | VPC Connector SG → all (NAT) / SSH → port 22                      | All            |
 
 - Deployer EC2 は SSM Session Manager で管理 (`AmazonSSMManagedInstanceCore` ポリシー付与済み)。SSH はデフォルト無効 (`ssh_allowed_cidrs = []`)
 - ECS タスクは public subnet に配置 (Public IP) → SG で ALB からのみ受け入れ
@@ -468,10 +469,10 @@ Push to main
 
 **Vitest** を Frontend / Backend 共通で使用。Vite エコシステムに統一し、設定を最小化。
 
-| 対象     | Framework | Environment | 補助ライブラリ                |
-| -------- | --------- | ----------- | ----------------------------- |
-| Frontend | Vitest    | jsdom       | React Testing Library, msw    |
-| Backend  | Vitest    | node        | supertest                     |
+| 対象     | Framework | Environment | 補助ライブラリ             |
+| -------- | --------- | ----------- | -------------------------- |
+| Frontend | Vitest    | jsdom       | React Testing Library, msw |
+| Backend  | Vitest    | node        | supertest                  |
 
 **テストファイル配置**: コロケーション方式 (テスト対象と同じディレクトリに `*.test.ts(x)` を配置)
 
@@ -488,16 +489,19 @@ npm run test:watch    # vitest (watch mode)
 ```
 
 **Frontend アーキテクチャ:**
+
 - **zustand** で状態管理 (`stores/`)
 - **services/** で API 呼び出しを集約 (コンポーネントから分離)
 - データフロー: Component → Store (action) → Service (API call) → Store (state update) → Component (re-render)
 
 **Frontend テスト方針:**
+
 - コンポーネントのレンダリング・ユーザー操作をテスト
 - zustand store / service を `vi.mock` でモック
 - `src/test/setup.ts` で jsdom 環境のセットアップ + Clerk モック
 
 **Backend テスト方針:**
+
 - supertest で Express ルートの統合テスト
 - Prisma Client はモック (`vi.mock`)
 - 認証ミドルウェアはテスト時にバイパス
@@ -583,15 +587,15 @@ terraform {
 
 本プロジェクトは比較検証用のため、以下のコスト・簡略化のためのトレードオフがある。
 
-| 項目 | テスト環境 (現状) | 本番で必要な対応 |
-|------|-------------------|------------------|
-| シークレット管理 | ECS/App Runner の環境変数に平文で渡す | Secrets Manager or SSM Parameter Store に移行 |
-| HTTPS | ALB は HTTP:80 のみ。App Runner は標準で HTTPS | ACM 証明書 + HTTPS リスナー + HTTP→HTTPS リダイレクト |
-| SSH | deployer EC2 の SSH はデフォルト無効 (`ssh_allowed_cidrs = []`) | SSM Session Manager の利用を推奨 |
-| RDS | `environments/dev.tfvars` で設定 (db.t3.micro, Single-AZ, skip_final_snapshot=true) | `environments/prod.tfvars` で Multi-AZ + 削除保護 + storage autoscaling |
-| NAT | EC2 (deployer) が NAT を兼務 (単一インスタンス, 冗長性なし) | マネージド NAT Gateway or 複数 AZ 構成 |
-| CloudWatch | アラーム定義済だが通知先 (SNS) はオプション | `alarm_sns_topic_arn` を設定して通知有効化 |
-| ECS タスク配置 | Public Subnet + Public IP (NAT 不要でコスト削減) | Private Subnet + NAT Gateway が望ましい |
+| 項目             | テスト環境 (現状)                                                                   | 本番で必要な対応                                                        |
+| ---------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| シークレット管理 | ECS/App Runner の環境変数に平文で渡す                                               | Secrets Manager or SSM Parameter Store に移行                           |
+| HTTPS            | ALB は HTTP:80 のみ。App Runner は標準で HTTPS                                      | ACM 証明書 + HTTPS リスナー + HTTP→HTTPS リダイレクト                   |
+| SSH              | deployer EC2 の SSH はデフォルト無効 (`ssh_allowed_cidrs = []`)                     | SSM Session Manager の利用を推奨                                        |
+| RDS              | `environments/dev.tfvars` で設定 (db.t3.micro, Single-AZ, skip_final_snapshot=true) | `environments/prod.tfvars` で Multi-AZ + 削除保護 + storage autoscaling |
+| NAT              | EC2 (deployer) が NAT を兼務 (単一インスタンス, 冗長性なし)                         | マネージド NAT Gateway or 複数 AZ 構成                                  |
+| CloudWatch       | アラーム定義済だが通知先 (SNS) はオプション                                         | `alarm_sns_topic_arn` を設定して通知有効化                              |
+| ECS タスク配置   | Public Subnet + Public IP (NAT 不要でコスト削減)                                    | Private Subnet + NAT Gateway が望ましい                                 |
 
 ---
 

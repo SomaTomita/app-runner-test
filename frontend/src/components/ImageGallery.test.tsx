@@ -23,9 +23,7 @@ describe("ImageGallery", () => {
   it("renders empty state", () => {
     render(<ImageGallery />);
 
-    expect(
-      screen.getByText(/No images loaded/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/No images loaded/)).toBeInTheDocument();
   });
 
   it("calls fetchImages on button click", async () => {
