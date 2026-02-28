@@ -1,0 +1,31 @@
+# ===== Deploy Mode =====
+# deploy_mode = "ecs"         # ALB + ECS Fargate
+# deploy_mode = "apprunner"   # App Runner
+
+# ===== Secrets (required, no defaults) =====
+db_password      = "CHANGE_ME"
+clerk_secret_key = "sk_test_CHANGE_ME"
+
+# ===== Optional overrides =====
+# project_name = "deploy-comparison"
+# environment  = "dev"
+# aws_region   = "ap-northeast-1"
+
+# ===== RDS =====
+# db_username = "appuser"
+# db_name     = "apprunner_db"
+
+# ===== ECS =====
+# ecs_cpu           = 256
+# ecs_memory        = 512
+# ecs_desired_count = 1
+
+# ===== App Runner =====
+# apprunner_cpu            = "1024"
+# apprunner_memory         = "2048"
+# apprunner_max_concurrency = 100
+# apprunner_max_size        = 5
+# apprunner_min_size        = 1
+
+# ===== Container =====
+# backend_image_tag = "latest"
