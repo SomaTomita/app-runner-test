@@ -1,0 +1,20 @@
+formatter: markdown table
+
+content: |-
+  {{ .Header }}
+
+  {{ .Requirements }}
+
+  {{ .Providers }}
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+output:
+  file: README.md
+  mode: inject
+
+sort:
+  enabled: true
+  by: required
