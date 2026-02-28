@@ -17,10 +17,10 @@ ALB+ECS(Fargate) と App Runner を Terraform 変数1つで切り替えて比較
 
 ## Architecture
 
-| Mode       | 構成                                   |
-| ---------- | -------------------------------------- |
-| ECS        | CloudFront + S3 / ALB + Fargate / RDS  |
-| App Runner | CloudFront + S3 / App Runner / RDS     |
+| Mode       | 構成                                  |
+| ---------- | ------------------------------------- |
+| ECS        | CloudFront + S3 / ALB + Fargate / RDS |
+| App Runner | CloudFront + S3 / App Runner / RDS    |
 
 詳細は [ARCHITECTURE.md](ARCHITECTURE.md) を参照。
 
@@ -83,12 +83,12 @@ terraform apply
 
 ## Deploy Commands (CI/CD)
 
-| Workflow               | Trigger       | Description                    |
-| ---------------------- | ------------- | ------------------------------ |
-| `ci.yml`               | Push / PR     | Lint, Type check, Test, Build  |
-| `deploy-ecs.yml`       | Push to main  | ECR push + ECS service update  |
-| `deploy-apprunner.yml` | Push to main  | ECR push + App Runner update   |
-| `deploy-frontend.yml`  | Push to main  | S3 sync + CloudFront invalidation |
+| Workflow               | Trigger      | Description                       |
+| ---------------------- | ------------ | --------------------------------- |
+| `ci.yml`               | Push / PR    | Lint, Type check, Test, Build     |
+| `deploy-ecs.yml`       | Push to main | ECR push + ECS service update     |
+| `deploy-apprunner.yml` | Push to main | ECR push + App Runner update      |
+| `deploy-frontend.yml`  | Push to main | S3 sync + CloudFront invalidation |
 
 ## Project Structure
 
@@ -145,17 +145,17 @@ awsdac diagrams/apprunner-mode.yaml -o diagrams/apprunner-mode.png
 
 ### Backend (`backend/.env`)
 
-| Variable           | Description              |
-| ------------------ | ------------------------ |
-| `DATABASE_URL`     | PostgreSQL 接続文字列    |
-| `CLERK_SECRET_KEY` | Clerk シークレットキー   |
+| Variable           | Description                    |
+| ------------------ | ------------------------------ |
+| `DATABASE_URL`     | PostgreSQL 接続文字列          |
+| `CLERK_SECRET_KEY` | Clerk シークレットキー         |
 | `PORT`             | サーバーポート (default: 3000) |
-| `S3_IMAGES_BUCKET` | 画像用 S3 バケット名          |
-| `AWS_REGION`       | AWS リージョン                |
+| `S3_IMAGES_BUCKET` | 画像用 S3 バケット名           |
+| `AWS_REGION`       | AWS リージョン                 |
 
 ### Frontend (`frontend/.env`)
 
-| Variable                       | Description               |
-| ------------------------------ | ------------------------- |
-| `VITE_CLERK_PUBLISHABLE_KEY`   | Clerk パブリッシュキー    |
-| `VITE_API_URL`                 | Backend API の URL        |
+| Variable                     | Description            |
+| ---------------------------- | ---------------------- |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk パブリッシュキー |
+| `VITE_API_URL`               | Backend API の URL     |

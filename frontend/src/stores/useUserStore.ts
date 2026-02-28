@@ -27,7 +27,7 @@ export const useUserStore = create<UserState>((set) => ({
     try {
       const users = await apiFetchUsers();
       set({ users, loading: false });
-    } catch (err) {
+    } catch {
       set({ error: "Failed to fetch users", loading: false });
     }
   },
@@ -37,7 +37,7 @@ export const useUserStore = create<UserState>((set) => ({
     try {
       const user = await apiCreateUser(input);
       set((state) => ({ users: [user, ...state.users] }));
-    } catch (err) {
+    } catch {
       set({ error: "Failed to create user" });
     }
   },
@@ -49,7 +49,7 @@ export const useUserStore = create<UserState>((set) => ({
       set((state) => ({
         users: state.users.map((u) => (u.id === id ? updated : u)),
       }));
-    } catch (err) {
+    } catch {
       set({ error: "Failed to update user" });
     }
   },
@@ -59,7 +59,7 @@ export const useUserStore = create<UserState>((set) => ({
     try {
       await apiDeleteUser(id);
       set((state) => ({ users: state.users.filter((u) => u.id !== id) }));
-    } catch (err) {
+    } catch {
       set({ error: "Failed to delete user" });
     }
   },

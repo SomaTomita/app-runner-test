@@ -16,7 +16,15 @@ function App() {
   return (
     <AuthGuard>
       <UserList />
-      <Suspense fallback={<p>Loading...</p>}>
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center py-12">
+            <p className="text-sm text-surface-500 dark:text-surface-400">
+              Loading...
+            </p>
+          </div>
+        }
+      >
         <ImageGallery />
       </Suspense>
     </AuthGuard>
