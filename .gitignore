@@ -24,6 +24,7 @@ Thumbs.db
 # Prisma
 backend/prisma/*.db
 backend/prisma/*.db-journal
+backend/src/generated/
 
 # Terraform
 terraform/.terraform/
@@ -38,3 +39,6 @@ coverage/
 
 # Logs
 *.log
+
+# docs
+docs/personal/
