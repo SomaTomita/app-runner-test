@@ -8,7 +8,9 @@ router.get("/", async (_req, res) => {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   } catch {
-    res.status(503).json({ status: "error", timestamp: new Date().toISOString() });
+    res
+      .status(503)
+      .json({ status: "error", timestamp: new Date().toISOString() });
   }
 });
 

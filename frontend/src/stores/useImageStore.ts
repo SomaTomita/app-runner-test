@@ -19,7 +19,7 @@ export const useImageStore = create<ImageState>((set) => ({
     try {
       const images = await fetchImages();
       set({ images, loading: false });
-    } catch (err) {
+    } catch {
       set({ error: "Failed to fetch images", loading: false });
     }
   },
