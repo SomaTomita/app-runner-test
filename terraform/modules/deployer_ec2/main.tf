@@ -4,6 +4,9 @@
 # - source_dest_check = false, ip_forward=1, iptables MASQUERADE
 # =============================================================================
 
+# --- AWS Account ID (for IAM resource scoping) ---
+data "aws_caller_identity" "current" {}
+
 # --- AMI (Amazon Linux 2023 最新) ---
 data "aws_ssm_parameter" "al2023" {
   name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
@@ -71,6 +74,37 @@ resource "aws_iam_role_policy_attachment" "deployer_ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+# --- IAM Policy: S3 + CloudFront (frontend deploy) ---
+resource "aws_iam_role_policy" "deployer_frontend" {
+  count = var.enable_frontend_deploy ? 1 : 0
+  name  = "${var.name_prefix}-deployer-frontend"
+  role  = aws_iam_role.deployer.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket",
+          "s3:GetObject",
+        ]
+        Resource = [
+          "arn:aws:s3:::${var.frontend_bucket_name}",
+          "arn:aws:s3:::${var.frontend_bucket_name}/*",
+        ]
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["cloudfront:CreateInvalidation"]
+        Resource = "arn:aws:cloudfront::${data.aws_caller_identity.current.account_id}:distribution/${var.cloudfront_distribution_id}"
+      },
+    ]
+  })
+}
+
 resource "aws_iam_instance_profile" "deployer" {
   name = "${var.name_prefix}-deployer"
   role = aws_iam_role.deployer.name
@@ -91,17 +125,57 @@ resource "aws_instance" "deployer" {
 
   user_data = <<-EOF
     #!/bin/bash
-    # Enable IP forwarding
+    set -euo pipefail
+
+    # ===== NAT Setup =====
     echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.d/99-nat.conf
     sysctl -p /etc/sysctl.d/99-nat.conf
 
-    # iptables MASQUERADE (SNAT)
     yum install -y iptables-services
-    iptables -t nat -A POSTROUTING -o ens5 -j MASQUERADE
-    iptables -A FORWARD -i ens5 -o ens5 -m state --state RELATED,ESTABLISHED -j ACCEPT
-    iptables -A FORWARD -i ens5 -o ens5 -j ACCEPT
+    PRIMARY_IF=$(ip route show default | awk '/default/ {print $5}')
+    iptables -t nat -A POSTROUTING -o "$PRIMARY_IF" -j MASQUERADE
+    iptables -A FORWARD -i "$PRIMARY_IF" -o "$PRIMARY_IF" -m state --state RELATED,ESTABLISHED -j ACCEPT
+    iptables -A FORWARD -i "$PRIMARY_IF" -o "$PRIMARY_IF" -j ACCEPT
     service iptables save
     systemctl enable iptables
+
+    %{if var.enable_frontend_deploy}
+    # ===== Frontend Build & Deploy =====
+    dnf install -y git
+    curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+    dnf install -y nodejs
+
+    cd /tmp
+    git clone --branch "${var.git_branch}" --depth 1 "${var.git_repo_url}" app
+    cd app/frontend
+
+    # Write env vars for Vite
+    %{for key, value in var.frontend_env_vars~}
+    printf '%s=%s\n' '${key}' '${value}' >> .env
+    %{endfor~}
+    chmod 600 .env
+
+    npm ci
+    npm run build
+
+    aws s3 sync dist/ s3://${var.frontend_bucket_name}/ --delete
+    aws cloudfront create-invalidation \
+      --distribution-id ${var.cloudfront_distribution_id} \
+      --paths "/*"
+
+    # Save deploy script for re-runs via SSM
+    cat > /opt/deploy-frontend.sh << 'DEPLOY'
+    #!/bin/bash
+    set -euo pipefail
+    cd /tmp/app && git pull
+    cd frontend && npm ci && npm run build
+    aws s3 sync dist/ s3://${var.frontend_bucket_name}/ --delete
+    aws cloudfront create-invalidation --distribution-id ${var.cloudfront_distribution_id} --paths "/*"
+    DEPLOY
+    chmod +x /opt/deploy-frontend.sh
+
+    echo "Frontend deploy completed at $(date)" >> /var/log/frontend-deploy.log
+    %{endif}
   EOF
 
   tags = {

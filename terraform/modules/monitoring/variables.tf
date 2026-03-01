@@ -4,7 +4,7 @@ variable "name_prefix" {
 }
 
 variable "deploy_mode" {
-  description = "Deployment mode: 'ecs' or 'apprunner'"
+  description = "Deployment mode: 'ecs', 'apprunner', or 'apprunner_deployer'"
   type        = string
 }
 

@@ -1,6 +1,7 @@
 # ===== Deploy Mode =====
-# deploy_mode = "ecs"         # ALB + ECS Fargate
-# deploy_mode = "apprunner"   # App Runner
+# deploy_mode = "ecs"                  # ALB + ECS Fargate
+# deploy_mode = "apprunner"            # App Runner + managed NAT Gateway (~$32/mo)
+# deploy_mode = "apprunner_deployer"   # App Runner + EC2 NAT + frontend S3 deploy (~$4/mo)
 
 # ===== Secrets (required, no defaults) =====
 db_password      = "CHANGE_ME"
@@ -21,11 +22,24 @@ clerk_secret_key = "sk_test_CHANGE_ME"
 # ecs_desired_count = 1
 
 # ===== App Runner =====
-# apprunner_cpu            = "1024"
-# apprunner_memory         = "2048"
+# apprunner_cpu             = "1024"
+# apprunner_memory          = "2048"
 # apprunner_max_concurrency = 100
 # apprunner_max_size        = 5
 # apprunner_min_size        = 1
 
+# ===== Deployer EC2 (apprunner_deployer mode only) =====
+# deployer_instance_type     = "t3.nano"
+# deployer_key_name          = ""
+# deployer_ssh_allowed_cidrs = []
+# deployer_git_repo_url      = "https://github.com/youruser/yourrepo.git"
+# deployer_git_branch        = "main"
+# deployer_frontend_env_vars = {
+#   VITE_CLERK_PUBLISHABLE_KEY = "pk_test_..."
+# }
+
 # ===== Container =====
 # backend_image_tag = "latest"
+
+# ===== Monitoring =====
+# alarm_sns_topic_arn = ""

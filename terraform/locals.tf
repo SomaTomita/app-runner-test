@@ -1,11 +1,12 @@
 locals {
-  name_prefix = "${var.project_name}-${var.environment}"
+  name_prefix  = "${var.project_name}-${var.environment}"
+  is_apprunner = contains(["apprunner", "apprunner_deployer"], var.deploy_mode)
 
-  # Backend URL based on deploy mode
+  # Backend URL based on deploy mode (both apprunner modes use App Runner URL)
   backend_url = var.deploy_mode == "ecs" ? (
-    "http://${module.ecs[0].alb_dns_name}"
+    "http://${try(module.ecs[0].alb_dns_name, "")}"
   ) : (
-    "https://${module.apprunner[0].service_url}"
+    "https://${try(module.apprunner[0].service_url, "")}"
   )
 
   # CloudFront domain for CORS

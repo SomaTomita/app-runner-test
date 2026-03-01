@@ -34,11 +34,11 @@ output "cloudfront_distribution_id" {
 }
 
 output "deployer_public_ip" {
-  description = "Deployer/NAT EC2 public IP"
-  value       = var.deploy_mode == "apprunner" ? module.deployer[0].public_ip : null
+  description = "Deployer/NAT EC2 public IP (apprunner_deployer mode only)"
+  value       = var.deploy_mode == "apprunner_deployer" ? module.deployer_ec2[0].public_ip : null
 }
 
 output "deployer_instance_id" {
-  description = "Deployer/NAT EC2 instance ID (for SSM Session Manager)"
-  value       = var.deploy_mode == "apprunner" ? module.deployer[0].instance_id : null
+  description = "Deployer/NAT EC2 instance ID for SSM Session Manager (apprunner_deployer mode only)"
+  value       = var.deploy_mode == "apprunner_deployer" ? module.deployer_ec2[0].instance_id : null
 }
