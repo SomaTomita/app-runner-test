@@ -21,13 +21,13 @@ variable "aws_region" {
 # ========== Deploy Mode ==========
 
 variable "deploy_mode" {
-  description = "Deployment mode: 'ecs' for ALB+ECS Fargate, 'apprunner' for App Runner"
+  description = "Deployment mode: 'ecs' (ALB+Fargate), 'apprunner' (App Runner+NAT GW), 'apprunner_deployer' (App Runner+EC2 NAT+S3 deploy)"
   type        = string
   default     = "ecs"
 
   validation {
-    condition     = contains(["ecs", "apprunner"], var.deploy_mode)
-    error_message = "deploy_mode must be either 'ecs' or 'apprunner'."
+    condition     = contains(["ecs", "apprunner", "apprunner_deployer"], var.deploy_mode)
+    error_message = "deploy_mode must be 'ecs', 'apprunner', or 'apprunner_deployer'."
   }
 }
 
@@ -129,6 +129,24 @@ variable "deployer_ssh_allowed_cidrs" {
   description = "CIDR blocks allowed to SSH into deployer EC2 (empty = SSH disabled)"
   type        = list(string)
   default     = []
+}
+
+variable "deployer_git_repo_url" {
+  description = "Git repository URL for frontend build (apprunner_deployer mode)"
+  type        = string
+  default     = ""
+}
+
+variable "deployer_git_branch" {
+  description = "Git branch to build frontend from (apprunner_deployer mode)"
+  type        = string
+  default     = "main"
+}
+
+variable "deployer_frontend_env_vars" {
+  description = "Additional environment variables for frontend build (e.g., VITE_CLERK_PUBLISHABLE_KEY)"
+  type        = map(string)
+  default     = {}
 }
 
 # ========== Monitoring ==========

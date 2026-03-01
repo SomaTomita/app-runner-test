@@ -41,4 +41,5 @@ coverage/
 *.log
 
 # docs
-docs/personal/
+docs/personal/*
+!docs/personal/.gitkeep

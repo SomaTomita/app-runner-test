@@ -1,10 +1,6 @@
 # ECS log group is created at root level (to avoid circular dependency with ECS module).
 # App Runner automatically creates its own log groups.
 
-locals {
-  alarm_actions = var.sns_topic_arn != "" ? [var.sns_topic_arn] : []
-}
-
 # ===== RDS Alarms (common) =====
 
 resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
@@ -128,7 +124,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
 # ===== App Runner Alarms (App Runner mode only) =====
 
 resource "aws_cloudwatch_metric_alarm" "apprunner_5xx" {
-  count               = var.deploy_mode == "apprunner" ? 1 : 0
+  count               = contains(["apprunner", "apprunner_deployer"], var.deploy_mode) ? 1 : 0
   alarm_name          = "${var.name_prefix}-apprunner-5xx-high"
   alarm_description   = "App Runner 5xx errors > 10 in 5 minutes"
   namespace           = "AWS/AppRunner"

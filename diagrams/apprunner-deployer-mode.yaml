@@ -1,0 +1,143 @@
+Diagram:
+  DefinitionFiles:
+    - Type: URL
+      Url: "https://raw.githubusercontent.com/awslabs/diagram-as-code/main/definitions/definition-for-aws-icons-light.yaml"
+
+  Resources:
+    Canvas:
+      Type: AWS::Diagram::Canvas
+      Direction: horizontal
+      Children:
+        - User
+        - AWSCloud
+        - ExternalAPI
+
+    User:
+      Type: AWS::Diagram::Resource
+      Preset: User
+
+    # --- External API (Clerk) ---
+    ExternalAPI:
+      Type: AWS::Diagram::Resource
+      Preset: ThirdPartyService
+      Title: "External API (Clerk)"
+
+    AWSCloud:
+      Type: AWS::Diagram::Cloud
+      Preset: AWSCloudNoLogo
+      Direction: vertical
+      Align: center
+      Children:
+        - CDNStack
+        - AppRunnerStack
+        - VPC
+
+    # --- Frontend (CDN) ---
+    CDNStack:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - CloudFront
+        - S3
+
+    CloudFront:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon CloudFront"
+      Title: "CloudFront"
+
+    S3:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon Simple Storage Service (Amazon S3)"
+      Title: "S3"
+
+    # --- App Runner + S3 Images ---
+    AppRunnerStack:
+      Type: AWS::Diagram::HorizontalStack
+      Children:
+        - AppRunner
+        - S3Images
+
+    AppRunner:
+      Type: AWS::Diagram::Resource
+      Preset: "AWS App Runner"
+      Title: "App Runner"
+
+    S3Images:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon Simple Storage Service (Amazon S3)"
+      Title: "S3 (Images)"
+
+    # --- VPC ---
+    VPC:
+      Type: AWS::EC2::VPC
+      Direction: vertical
+      Children:
+        - PublicSubnet
+        - PrivateSubnet
+
+    PublicSubnet:
+      Type: AWS::EC2::Subnet
+      Preset: PublicSubnet
+      Children:
+        - Deployer
+
+    Deployer:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon Elastic Compute Cloud (Amazon EC2)"
+      Title: "EC2 (deployer + NAT)"
+
+    PrivateSubnet:
+      Type: AWS::EC2::Subnet
+      Preset: PrivateSubnet
+      Children:
+        - RDS
+
+    RDS:
+      Type: AWS::Diagram::Resource
+      Preset: "Amazon Relational Database Service (Amazon RDS)"
+      Title: "RDS"
+
+  Links:
+    - Source: User
+      Target: CloudFront
+      TargetArrowHead:
+        Type: Open
+    - Source: User
+      Target: AppRunner
+      TargetArrowHead:
+        Type: Open
+    - Source: CloudFront
+      Target: S3
+      TargetArrowHead:
+        Type: Open
+    - Source: AppRunner
+      Target: RDS
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        TargetRight:
+          Title: "VPC Connector"
+    - Source: AppRunner
+      Target: S3Images
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        TargetRight:
+          Title: "S3 Gateway Endpoint"
+    - Source: AppRunner
+      Target: Deployer
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        TargetRight:
+          Title: "VPC (egress)"
+    - Source: Deployer
+      Target: ExternalAPI
+      TargetArrowHead:
+        Type: Open
+    - Source: Deployer
+      Target: S3
+      TargetArrowHead:
+        Type: Open
+      Labels:
+        TargetRight:
+          Title: "Build & Deploy"

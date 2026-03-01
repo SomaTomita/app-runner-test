@@ -4,7 +4,7 @@ module "vpc" {
   source             = "./modules/vpc"
   name_prefix        = local.name_prefix
   aws_region         = var.aws_region
-  create_nat_gateway = false # NAT は deployer EC2 で代替
+  create_nat_gateway = var.deploy_mode == "apprunner" # apprunner: マネージド NAT GW, apprunner_deployer: EC2 NAT
 }
 
 # ===== ECR =====
@@ -46,7 +46,7 @@ module "rds" {
   db_password        = var.db_password
   allowed_security_group_ids = compact([
     var.deploy_mode == "ecs" ? module.ecs[0].task_security_group_id : "",
-    var.deploy_mode == "apprunner" ? module.apprunner[0].vpc_connector_security_group_id : "",
+    local.is_apprunner ? module.apprunner[0].vpc_connector_security_group_id : "",
   ])
 }
 
@@ -75,7 +75,7 @@ module "ecs" {
 # ===== App Runner =====
 
 module "apprunner" {
-  count  = var.deploy_mode == "apprunner" ? 1 : 0
+  count  = local.is_apprunner ? 1 : 0
   source = "./modules/apprunner"
 
   name_prefix        = local.name_prefix
@@ -96,11 +96,11 @@ module "apprunner" {
   cors_origins       = local.cloudfront_domain
 }
 
-# ===== Deployer EC2 (deployer + NAT) =====
+# ===== Deployer EC2 (NAT + frontend deploy) =====
 
-module "deployer" {
-  count  = var.deploy_mode == "apprunner" ? 1 : 0
-  source = "./modules/deployer"
+module "deployer_ec2" {
+  count  = var.deploy_mode == "apprunner_deployer" ? 1 : 0
+  source = "./modules/deployer_ec2"
 
   name_prefix               = local.name_prefix
   vpc_id                    = module.vpc.vpc_id
@@ -110,6 +110,14 @@ module "deployer" {
   instance_type             = var.deployer_instance_type
   key_name                  = var.deployer_key_name
   ssh_allowed_cidrs         = var.deployer_ssh_allowed_cidrs
+
+  # Frontend build & deploy
+  enable_frontend_deploy     = true
+  frontend_bucket_name       = module.s3_cdn.bucket_name
+  cloudfront_distribution_id = module.s3_cdn.distribution_id
+  git_repo_url               = var.deployer_git_repo_url
+  git_branch                 = var.deployer_git_branch
+  frontend_env_vars          = merge({ VITE_API_URL = "" }, var.deployer_frontend_env_vars)
 }
 
 # ===== Monitoring (Alarms + Dashboard) =====
@@ -126,7 +134,7 @@ module "monitoring" {
   ecs_service_name        = var.deploy_mode == "ecs" ? module.ecs[0].service_name : ""
   alb_arn_suffix          = var.deploy_mode == "ecs" ? module.ecs[0].alb_arn_suffix : ""
   target_group_arn_suffix = var.deploy_mode == "ecs" ? module.ecs[0].target_group_arn_suffix : ""
-  apprunner_service_name  = var.deploy_mode == "apprunner" ? module.apprunner[0].service_name : ""
+  apprunner_service_name  = local.is_apprunner ? module.apprunner[0].service_name : ""
 }
 
 # ===== S3 + CloudFront (Frontend CDN) =====
