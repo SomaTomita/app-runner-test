@@ -59,6 +59,36 @@ variable "db_name" {
   default     = "apprunner_db"
 }
 
+variable "rds_instance_class" {
+  description = "RDS instance class"
+  type        = string
+  default     = "db.t3.micro"
+}
+
+variable "rds_multi_az" {
+  description = "Enable Multi-AZ for RDS"
+  type        = bool
+  default     = false
+}
+
+variable "rds_skip_final_snapshot" {
+  description = "Skip final snapshot on RDS deletion (set false for staging/prod)"
+  type        = bool
+  default     = true
+}
+
+variable "rds_deletion_protection" {
+  description = "Enable deletion protection for RDS"
+  type        = bool
+  default     = false
+}
+
+variable "rds_max_allocated_storage" {
+  description = "Max storage for RDS autoscaling (0 = disabled)"
+  type        = number
+  default     = 0
+}
+
 # ========== ECS ==========
 
 variable "ecs_cpu" {
@@ -85,12 +115,22 @@ variable "apprunner_cpu" {
   description = "App Runner CPU (256|512|1024|2048|4096)"
   type        = string
   default     = "1024"
+
+  validation {
+    condition     = contains(["256", "512", "1024", "2048", "4096"], var.apprunner_cpu)
+    error_message = "apprunner_cpu must be one of: 256, 512, 1024, 2048, 4096."
+  }
 }
 
 variable "apprunner_memory" {
-  description = "App Runner memory (512|1024|2048|3072|4096|...)"
+  description = "App Runner memory (512|1024|2048|3072|4096|6144|8192|10240|12288)"
   type        = string
   default     = "2048"
+
+  validation {
+    condition     = contains(["512", "1024", "2048", "3072", "4096", "6144", "8192", "10240", "12288"], var.apprunner_memory)
+    error_message = "apprunner_memory must be one of: 512, 1024, 2048, 3072, 4096, 6144, 8192, 10240, 12288."
+  }
 }
 
 variable "apprunner_max_concurrency" {
@@ -162,5 +202,4 @@ variable "alarm_sns_topic_arn" {
 variable "backend_image_tag" {
   description = "Docker image tag for backend (e.g., git SHA)"
   type        = string
-  default     = "latest"
 }

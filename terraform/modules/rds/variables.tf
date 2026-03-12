@@ -33,3 +33,33 @@ variable "allowed_security_group_ids" {
   description = "Security group IDs allowed to access RDS (ECS task SG or App Runner VPC Connector SG)"
   type        = list(string)
 }
+
+variable "instance_class" {
+  description = "RDS instance class"
+  type        = string
+  default     = "db.t3.micro"
+}
+
+variable "multi_az" {
+  description = "Enable Multi-AZ deployment"
+  type        = bool
+  default     = false
+}
+
+variable "skip_final_snapshot" {
+  description = "Skip final snapshot on deletion"
+  type        = bool
+  default     = true
+}
+
+variable "deletion_protection" {
+  description = "Enable deletion protection"
+  type        = bool
+  default     = false
+}
+
+variable "max_allocated_storage" {
+  description = "Max storage for autoscaling (0 = disabled)"
+  type        = number
+  default     = 0
+}

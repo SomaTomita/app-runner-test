@@ -44,6 +44,11 @@ module "rds" {
   db_name            = var.db_name
   db_username        = var.db_username
   db_password        = var.db_password
+  instance_class        = var.rds_instance_class
+  multi_az              = var.rds_multi_az
+  skip_final_snapshot   = var.rds_skip_final_snapshot
+  deletion_protection   = var.rds_deletion_protection
+  max_allocated_storage = var.rds_max_allocated_storage
   allowed_security_group_ids = compact([
     var.deploy_mode == "ecs" ? module.ecs[0].task_security_group_id : "",
     local.is_apprunner ? module.apprunner[0].vpc_connector_security_group_id : "",

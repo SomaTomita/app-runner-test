@@ -22,3 +22,6 @@ apprunner_memory          = "2048"
 apprunner_max_concurrency = 100
 apprunner_max_size        = 5
 apprunner_min_size        = 1
+
+# ===== Container =====
+backend_image_tag = "latest"
