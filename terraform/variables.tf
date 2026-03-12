@@ -189,6 +189,14 @@ variable "deployer_frontend_env_vars" {
   default     = {}
 }
 
+# ========== CORS ==========
+
+variable "cors_origins" {
+  description = "Allowed CORS origins for backend (use '*' for testing, set CloudFront domain for production)"
+  type        = string
+  default     = "*"
+}
+
 # ========== Monitoring ==========
 
 variable "alarm_sns_topic_arn" {
