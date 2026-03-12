@@ -74,7 +74,7 @@ module "ecs" {
   clerk_secret_key   = var.clerk_secret_key
   s3_images_bucket     = module.s3_images.bucket_name
   s3_images_bucket_arn = module.s3_images.bucket_arn
-  cors_origins       = local.cloudfront_domain
+  cors_origins       = var.cors_origins
 }
 
 # ===== App Runner =====
@@ -98,7 +98,7 @@ module "apprunner" {
   clerk_secret_key   = var.clerk_secret_key
   s3_images_bucket     = module.s3_images.bucket_name
   s3_images_bucket_arn = module.s3_images.bucket_arn
-  cors_origins       = local.cloudfront_domain
+  cors_origins       = var.cors_origins
 }
 
 # ===== Deployer EC2 (NAT + frontend deploy) =====

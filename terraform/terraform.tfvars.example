@@ -39,7 +39,7 @@ clerk_secret_key = "sk_test_CHANGE_ME"
 # }
 
 # ===== Container =====
-# backend_image_tag = "latest"
+backend_image_tag = "latest"
 
 # ===== Monitoring =====
 # alarm_sns_topic_arn = ""
