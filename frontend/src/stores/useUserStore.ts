@@ -39,6 +39,7 @@ export const useUserStore = create<UserState>((set) => ({
       set((state) => ({ users: [user, ...state.users] }));
     } catch {
       set({ error: "Failed to create user" });
+      throw new Error("Failed to create user");
     }
   },
 

@@ -77,6 +77,16 @@ variable "clerk_secret_key" {
   sensitive   = true
 }
 
+variable "clerk_publishable_key" {
+  description = "Clerk publishable key"
+  type        = string
+}
+
+variable "allowed_user_ids" {
+  description = "Comma-separated allowed Clerk user IDs"
+  type        = string
+}
+
 variable "s3_images_bucket" {
   description = "S3 images bucket name"
   type        = string

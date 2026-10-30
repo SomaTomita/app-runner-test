@@ -22,6 +22,7 @@ vi.mock("../lib/prisma", () => ({
 import { prisma } from "../lib/prisma";
 import usersRouter from "./users";
 import { errorHandler } from "../middleware/errorHandler";
+import { Prisma } from "../generated/prisma/client";
 
 const app = express();
 app.use(express.json());
@@ -54,6 +55,14 @@ describe("Users routes", () => {
   });
 
   describe("GET /api/users/:id", () => {
+    it.each(["abc", "0", "-1", "1.5", "2147483648", "9007199254740993"])(
+      "rejects invalid ID %s before querying the database",
+      async (id) => {
+        const res = await request(app).get(`/api/users/${id}`);
+        expect(res.status).toBe(400);
+        expect(prisma.user.findUnique).not.toHaveBeenCalled();
+      },
+    );
     it("returns a user by id", async () => {
       vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser);
 
@@ -74,6 +83,26 @@ describe("Users routes", () => {
   });
 
   describe("POST /api/users", () => {
+    it("returns 400 for malformed JSON", async () => {
+      const res = await request(app)
+        .post("/api/users")
+        .set("Content-Type", "application/json")
+        .send('{"email":');
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 409 for an existing email", async () => {
+      vi.mocked(prisma.user.create).mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError("Duplicate", {
+          code: "P2002",
+          clientVersion: "test",
+        }),
+      );
+      const res = await request(app)
+        .post("/api/users")
+        .send({ email: "test@example.com", name: "Test" });
+      expect(res.status).toBe(409);
+    });
     it("creates a user", async () => {
       vi.mocked(prisma.user.create).mockResolvedValue(mockUser);
 
@@ -96,6 +125,18 @@ describe("Users routes", () => {
   });
 
   describe("PUT /api/users/:id", () => {
+    it("returns 409 when an update duplicates an existing email", async () => {
+      vi.mocked(prisma.user.update).mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError("Duplicate", {
+          code: "P2002",
+          clientVersion: "test",
+        }),
+      );
+      const res = await request(app)
+        .put("/api/users/1")
+        .send({ email: "test@example.com" });
+      expect(res.status).toBe(409);
+    });
     it("updates a user", async () => {
       const updated = { ...mockUser, name: "Updated" };
       vi.mocked(prisma.user.update).mockResolvedValue(updated);

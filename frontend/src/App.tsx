@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useLayoutEffect } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { setTokenGetter } from "./api/client";
 import { AuthGuard } from "./components/AuthGuard";
@@ -9,8 +9,9 @@ const ImageGallery = lazy(() => import("./components/ImageGallery"));
 function App() {
   const { getToken } = useAuth();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setTokenGetter(getToken);
+    return () => setTokenGetter(null);
   }, [getToken]);
 
   return (

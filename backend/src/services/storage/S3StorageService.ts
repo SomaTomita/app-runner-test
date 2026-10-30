@@ -2,6 +2,7 @@ import {
   S3Client,
   ListObjectsV2Command,
   GetObjectCommand,
+  HeadObjectCommand,
   _Object,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -30,7 +31,11 @@ export class S3StorageService extends StorageService {
           ContinuationToken: continuationToken,
         }),
       );
-      allContents.push(...(response.Contents ?? []));
+      allContents.push(
+        ...(response.Contents ?? []).filter(
+          (obj) => obj.Key && /\.(png|jpe?g|gif|webp)$/i.test(obj.Key),
+        ),
+      );
       continuationToken = response.IsTruncated
         ? response.NextContinuationToken
         : undefined;
@@ -72,14 +77,26 @@ export class S3StorageService extends StorageService {
   }
 
   async getImageUrl(key: string): Promise<string> {
+    if (!/\.(png|jpe?g|gif|webp)$/i.test(key)) {
+      throw new AppError(400, "Invalid image key");
+    }
     try {
+      await this.client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
       const command = new GetObjectCommand({
         Bucket: this.bucket,
         Key: key,
       });
       return await getSignedUrl(this.client, command, { expiresIn: 3600 });
-    } catch {
-      throw new AppError(404, "Image not found");
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err.name === "NotFound" || err.name === "NoSuchKey")
+      ) {
+        throw new AppError(404, "Image not found");
+      }
+      throw err;
     }
   }
 }

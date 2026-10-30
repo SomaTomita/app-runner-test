@@ -141,6 +141,7 @@ resource "aws_cloudwatch_metric_alarm" "apprunner_5xx" {
 
   dimensions = {
     ServiceName = var.apprunner_service_name
+    ServiceID   = var.apprunner_service_id
   }
 
   tags = { Name = "${var.name_prefix}-apprunner-5xx-high" }
@@ -160,7 +161,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 12
         height = 6
         properties = {
-          title   = "ECS CPU / Memory Utilization"
+          title = "ECS CPU / Memory Utilization"
           metrics = [
             ["AWS/ECS", "CPUUtilization", "ClusterName", var.ecs_cluster_name, "ServiceName", var.ecs_service_name],
             ["AWS/ECS", "MemoryUtilization", "ClusterName", var.ecs_cluster_name, "ServiceName", var.ecs_service_name],
@@ -177,7 +178,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 12
         height = 6
         properties = {
-          title   = "ALB 5xx / 4xx Errors"
+          title = "ALB 5xx / 4xx Errors"
           metrics = [
             ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", var.alb_arn_suffix],
             ["AWS/ApplicationELB", "HTTPCode_Target_4XX_Count", "LoadBalancer", var.alb_arn_suffix],
@@ -194,7 +195,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 12
         height = 6
         properties = {
-          title   = "RDS CPU / Connections"
+          title = "RDS CPU / Connections"
           metrics = [
             ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", var.rds_instance_identifier],
             ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", var.rds_instance_identifier],
@@ -205,7 +206,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         }
       },
     ]
-  }) : jsonencode({
+    }) : jsonencode({
     widgets = [
       {
         type   = "metric"
@@ -214,10 +215,10 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 12
         height = 6
         properties = {
-          title   = "App Runner Requests / Latency"
+          title = "App Runner Requests / Latency"
           metrics = [
-            ["AWS/AppRunner", "2xxStatusResponses", "ServiceName", var.apprunner_service_name],
-            ["AWS/AppRunner", "5xxStatusResponses", "ServiceName", var.apprunner_service_name],
+            ["AWS/AppRunner", "2xxStatusResponses", "ServiceName", var.apprunner_service_name, "ServiceID", var.apprunner_service_id],
+            ["AWS/AppRunner", "5xxStatusResponses", "ServiceName", var.apprunner_service_name, "ServiceID", var.apprunner_service_id],
           ]
           period = 300
           stat   = "Sum"
@@ -231,9 +232,9 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 12
         height = 6
         properties = {
-          title   = "App Runner Active Instances"
+          title = "App Runner Active Instances"
           metrics = [
-            ["AWS/AppRunner", "ActiveInstances", "ServiceName", var.apprunner_service_name],
+            ["AWS/AppRunner", "ActiveInstances", "ServiceName", var.apprunner_service_name, "ServiceID", var.apprunner_service_id],
           ]
           period = 300
           stat   = "Average"
@@ -247,7 +248,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         width  = 12
         height = 6
         properties = {
-          title   = "RDS CPU / Connections"
+          title = "RDS CPU / Connections"
           metrics = [
             ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", var.rds_instance_identifier],
             ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", var.rds_instance_identifier],

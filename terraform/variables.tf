@@ -45,6 +45,20 @@ variable "clerk_secret_key" {
   sensitive   = true
 }
 
+variable "clerk_publishable_key" {
+  description = "Clerk publishable key for backend authentication"
+  type        = string
+}
+
+variable "allowed_user_ids" {
+  description = "Comma-separated Clerk user IDs allowed to access this learning app"
+  type        = string
+  validation {
+    condition     = length(trimspace(var.allowed_user_ids)) > 0
+    error_message = "Set at least one allowed Clerk user ID."
+  }
+}
+
 # ========== RDS ==========
 
 variable "db_username" {

@@ -6,8 +6,8 @@ resource "aws_iam_role" "ecs_task_execution" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
       Principal = { Service = "ecs-tasks.amazonaws.com" }
     }]
   })
@@ -28,8 +28,8 @@ resource "aws_iam_role" "ecs_task" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
       Principal = { Service = "ecs-tasks.amazonaws.com" }
     }]
   })
@@ -142,10 +142,8 @@ resource "aws_lb_target_group" "backend" {
   tags = { Name = "${var.name_prefix}-backend" }
 }
 
-# TODO: Production では HTTPS 対応を追加すること:
-# 1. ACM でドメイン証明書を作成
-# 2. aws_lb_listener (HTTPS:443) を追加し、ssl_policy + certificate_arn を設定
-# 3. この HTTP:80 リスナーのアクションを redirect (HTTPS:443) に変更
+# Before production: configure an ACM certificate and an HTTPS listener,
+# then redirect HTTP requests to HTTPS. This learning configuration uses HTTP.
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
@@ -190,12 +188,13 @@ resource "aws_ecs_task_definition" "backend" {
       protocol      = "tcp"
     }]
 
-    # TODO: Production ではシークレットを平文 environment で渡さず、
-    # Secrets Manager + ECS secrets フィールドを使用すること。
-    # 現状は AWS Console やコンテナ内から値が閲覧可能な状態。
+    # Learning setup: values are visible to principals that can inspect task definitions.
+    # Use Secrets Manager references in the ECS secrets field for production.
     environment = [
       { name = "DATABASE_URL", value = var.database_url },
       { name = "CLERK_SECRET_KEY", value = var.clerk_secret_key },
+      { name = "CLERK_PUBLISHABLE_KEY", value = var.clerk_publishable_key },
+      { name = "ALLOWED_USER_IDS", value = var.allowed_user_ids },
       { name = "PORT", value = tostring(var.container_port) },
       { name = "BASE_URL", value = "http://${aws_lb.main.dns_name}" },
       { name = "STORAGE_TYPE", value = "s3" },

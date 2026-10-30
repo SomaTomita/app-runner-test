@@ -4,7 +4,7 @@ module "vpc" {
   source             = "./modules/vpc"
   name_prefix        = local.name_prefix
   aws_region         = var.aws_region
-  create_nat_gateway = var.deploy_mode == "apprunner" # apprunner: マネージド NAT GW, apprunner_deployer: EC2 NAT
+  create_nat_gateway = var.deploy_mode == "apprunner" # Managed NAT gateway; apprunner_deployer uses EC2 NAT.
 }
 
 # ===== ECR =====
@@ -37,13 +37,13 @@ resource "aws_cloudwatch_log_group" "ecs_backend" {
 # ===== RDS =====
 
 module "rds" {
-  source             = "./modules/rds"
-  name_prefix        = local.name_prefix
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnet_ids
-  db_name            = var.db_name
-  db_username        = var.db_username
-  db_password        = var.db_password
+  source                = "./modules/rds"
+  name_prefix           = local.name_prefix
+  vpc_id                = module.vpc.vpc_id
+  private_subnet_ids    = module.vpc.private_subnet_ids
+  db_name               = var.db_name
+  db_username           = var.db_username
+  db_password           = var.db_password
   instance_class        = var.rds_instance_class
   multi_az              = var.rds_multi_az
   skip_final_snapshot   = var.rds_skip_final_snapshot
@@ -61,20 +61,22 @@ module "ecs" {
   count  = var.deploy_mode == "ecs" ? 1 : 0
   source = "./modules/ecs"
 
-  name_prefix        = local.name_prefix
-  vpc_id             = module.vpc.vpc_id
-  public_subnet_ids  = module.vpc.public_subnet_ids
-  backend_image_uri  = local.backend_image_uri
-  cpu                = var.ecs_cpu
-  memory             = var.ecs_memory
-  desired_count      = var.ecs_desired_count
-  log_group_name     = aws_cloudwatch_log_group.ecs_backend[0].name
-  aws_region         = var.aws_region
-  database_url       = local.database_url
-  clerk_secret_key   = var.clerk_secret_key
-  s3_images_bucket     = module.s3_images.bucket_name
-  s3_images_bucket_arn = module.s3_images.bucket_arn
-  cors_origins       = var.cors_origins
+  name_prefix           = local.name_prefix
+  vpc_id                = module.vpc.vpc_id
+  public_subnet_ids     = module.vpc.public_subnet_ids
+  backend_image_uri     = local.backend_image_uri
+  cpu                   = var.ecs_cpu
+  memory                = var.ecs_memory
+  desired_count         = var.ecs_desired_count
+  log_group_name        = aws_cloudwatch_log_group.ecs_backend[0].name
+  aws_region            = var.aws_region
+  database_url          = local.database_url
+  clerk_secret_key      = var.clerk_secret_key
+  clerk_publishable_key = var.clerk_publishable_key
+  allowed_user_ids      = var.allowed_user_ids
+  s3_images_bucket      = module.s3_images.bucket_name
+  s3_images_bucket_arn  = module.s3_images.bucket_arn
+  cors_origins          = var.cors_origins
 }
 
 # ===== App Runner =====
@@ -83,22 +85,24 @@ module "apprunner" {
   count  = local.is_apprunner ? 1 : 0
   source = "./modules/apprunner"
 
-  name_prefix        = local.name_prefix
-  ecr_repository_url = module.ecr.repository_url
-  backend_image_tag  = var.backend_image_tag
-  cpu                = var.apprunner_cpu
-  memory             = var.apprunner_memory
-  max_concurrency    = var.apprunner_max_concurrency
-  max_size           = var.apprunner_max_size
-  min_size           = var.apprunner_min_size
-  aws_region         = var.aws_region
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnet_ids
-  database_url       = local.database_url
-  clerk_secret_key   = var.clerk_secret_key
-  s3_images_bucket     = module.s3_images.bucket_name
-  s3_images_bucket_arn = module.s3_images.bucket_arn
-  cors_origins       = var.cors_origins
+  name_prefix           = local.name_prefix
+  ecr_repository_url    = module.ecr.repository_url
+  backend_image_tag     = var.backend_image_tag
+  cpu                   = var.apprunner_cpu
+  memory                = var.apprunner_memory
+  max_concurrency       = var.apprunner_max_concurrency
+  max_size              = var.apprunner_max_size
+  min_size              = var.apprunner_min_size
+  aws_region            = var.aws_region
+  vpc_id                = module.vpc.vpc_id
+  private_subnet_ids    = module.vpc.private_subnet_ids
+  database_url          = local.database_url
+  clerk_secret_key      = var.clerk_secret_key
+  clerk_publishable_key = var.clerk_publishable_key
+  allowed_user_ids      = var.allowed_user_ids
+  s3_images_bucket      = module.s3_images.bucket_name
+  s3_images_bucket_arn  = module.s3_images.bucket_arn
+  cors_origins          = var.cors_origins
 }
 
 # ===== Deployer EC2 (NAT + frontend deploy) =====
@@ -140,6 +144,7 @@ module "monitoring" {
   alb_arn_suffix          = var.deploy_mode == "ecs" ? module.ecs[0].alb_arn_suffix : ""
   target_group_arn_suffix = var.deploy_mode == "ecs" ? module.ecs[0].target_group_arn_suffix : ""
   apprunner_service_name  = local.is_apprunner ? module.apprunner[0].service_name : ""
+  apprunner_service_id    = local.is_apprunner ? module.apprunner[0].service_id : ""
 }
 
 # ===== S3 + CloudFront (Frontend CDN) =====

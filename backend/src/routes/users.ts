@@ -3,6 +3,7 @@ import { z } from "zod";
 import { UserService } from "../services/UserService";
 import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/auth";
+import { AppError } from "../lib/errors";
 
 const router = Router();
 const userService = new UserService(prisma);
@@ -18,6 +19,20 @@ const updateUserSchema = z.object({
 });
 
 router.use(authMiddleware);
+
+router.param("id", (_req, _res, next, value: string) => {
+  const id = Number(value);
+  if (
+    !/^\d+$/.test(value) ||
+    !Number.isSafeInteger(id) ||
+    id < 1 ||
+    id > 2147483647
+  ) {
+    next(new AppError(400, "Invalid user ID"));
+    return;
+  }
+  next();
+});
 
 router.get("/", async (_req, res, next) => {
   try {

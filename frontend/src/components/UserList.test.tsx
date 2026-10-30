@@ -26,6 +26,8 @@ const mockStore = {
 
 describe("UserList", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    mockStore.createUser.mockResolvedValue(undefined);
     vi.mocked(useUserStore).mockImplementation((selector: any) =>
       selector(mockStore),
     );
@@ -89,5 +91,21 @@ describe("UserList", () => {
         email: "bob@example.com",
       });
     });
+  });
+
+  it("preserves form input after a failed create", async () => {
+    mockStore.createUser.mockRejectedValue(new Error("Create failed"));
+    const user = userEvent.setup();
+    render(<UserList />);
+    await user.click(screen.getByText("Add User"));
+    await user.type(screen.getByPlaceholderText("Name"), "Bob");
+    await user.type(screen.getByPlaceholderText("Email"), "bob@example.com");
+    await user.click(screen.getByText("Create"));
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText("Email")).toHaveValue(
+        "bob@example.com",
+      ),
+    );
+    expect(screen.getByPlaceholderText("Name")).toHaveValue("Bob");
   });
 });
