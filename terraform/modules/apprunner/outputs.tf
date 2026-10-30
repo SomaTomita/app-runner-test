@@ -17,3 +17,8 @@ output "service_name" {
   description = "App Runner service name"
   value       = aws_apprunner_service.backend.service_name
 }
+
+output "service_id" {
+  description = "App Runner service ID used by CloudWatch metric dimensions"
+  value       = split("/", aws_apprunner_service.backend.arn)[2]
+}

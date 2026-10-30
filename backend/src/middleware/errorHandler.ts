@@ -9,7 +9,16 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   }
 
   if (err instanceof ZodError) {
-    res.status(400).json({ error: "Validation failed", details: err.errors });
+    res.status(400).json({ error: "Validation failed", details: err.issues });
+    return;
+  }
+
+  if (
+    err instanceof SyntaxError &&
+    "type" in err &&
+    err.type === "entity.parse.failed"
+  ) {
+    res.status(400).json({ error: "Invalid JSON" });
     return;
   }
 

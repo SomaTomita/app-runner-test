@@ -54,6 +54,12 @@ variable "apprunner_service_name" {
   default     = ""
 }
 
+variable "apprunner_service_id" {
+  description = "App Runner service ID for CloudWatch metric dimensions"
+  type        = string
+  default     = ""
+}
+
 # ===== Notification =====
 
 variable "sns_topic_arn" {

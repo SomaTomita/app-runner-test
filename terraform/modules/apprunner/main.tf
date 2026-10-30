@@ -6,8 +6,8 @@ resource "aws_iam_role" "apprunner_access" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
       Principal = { Service = "build.apprunner.amazonaws.com" }
     }]
   })
@@ -28,8 +28,8 @@ resource "aws_iam_role" "apprunner_instance" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
       Principal = { Service = "tasks.apprunner.amazonaws.com" }
     }]
   })
@@ -116,18 +116,19 @@ resource "aws_apprunner_service" "backend" {
       image_configuration {
         port = tostring(var.container_port)
 
-        # TODO: Production ではシークレットを平文で渡さず、
-        # SSM Parameter Store / Secrets Manager を使用すること。
-        # 現状は AWS Console から値が閲覧可能な状態。
+        # Learning setup: values are visible to principals that can inspect the service.
+        # Use SSM Parameter Store or Secrets Manager references for production.
         runtime_environment_variables = {
-          DATABASE_URL     = var.database_url
-          CLERK_SECRET_KEY = var.clerk_secret_key
-          PORT             = tostring(var.container_port)
-          STORAGE_TYPE     = "s3"
-          S3_IMAGES_BUCKET = var.s3_images_bucket
-          AWS_REGION       = var.aws_region
-          CORS_ORIGINS     = var.cors_origins
-          NODE_ENV         = "production"
+          DATABASE_URL          = var.database_url
+          CLERK_SECRET_KEY      = var.clerk_secret_key
+          CLERK_PUBLISHABLE_KEY = var.clerk_publishable_key
+          ALLOWED_USER_IDS      = var.allowed_user_ids
+          PORT                  = tostring(var.container_port)
+          STORAGE_TYPE          = "s3"
+          S3_IMAGES_BUCKET      = var.s3_images_bucket
+          AWS_REGION            = var.aws_region
+          CORS_ORIGINS          = var.cors_origins
+          NODE_ENV              = "production"
         }
       }
     }

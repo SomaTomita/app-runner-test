@@ -17,7 +17,17 @@ export class UserService {
   }
 
   async create(data: { email: string; name: string }): Promise<User> {
-    return this.prisma.user.create({ data });
+    try {
+      return await this.prisma.user.create({ data });
+    } catch (err: unknown) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        throw new AppError(409, "Email already exists");
+      }
+      throw err;
+    }
   }
 
   async update(
@@ -27,6 +37,12 @@ export class UserService {
     try {
       return await this.prisma.user.update({ where: { id }, data });
     } catch (err: unknown) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === "P2002"
+      ) {
+        throw new AppError(409, "Email already exists");
+      }
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === "P2025"

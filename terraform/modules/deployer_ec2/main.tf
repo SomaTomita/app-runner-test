@@ -1,13 +1,13 @@
 # =============================================================================
 # EC2 (deployer + NAT)
-# - デプロイ用 EC2 + App Runner の外部 API アクセス用 NAT を兼務
+# - Combines frontend deployment with NAT for App Runner external API access.
 # - source_dest_check = false, ip_forward=1, iptables MASQUERADE
 # =============================================================================
 
 # --- AWS Account ID (for IAM resource scoping) ---
 data "aws_caller_identity" "current" {}
 
-# --- AMI (Amazon Linux 2023 最新) ---
+# --- AMI (latest Amazon Linux 2023) ---
 data "aws_ssm_parameter" "al2023" {
   name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
 }
@@ -18,7 +18,7 @@ resource "aws_security_group" "deployer" {
   vpc_id      = var.vpc_id
   description = "Deployer/NAT EC2 security group"
 
-  # NAT: VPC Connector SG からの全トラフィック許可
+  # NAT: allow traffic from the VPC Connector security group.
   ingress {
     from_port       = 0
     to_port         = 0
@@ -118,10 +118,15 @@ resource "aws_instance" "deployer" {
   instance_type               = var.instance_type
   subnet_id                   = var.public_subnet_id
   vpc_security_group_ids      = [aws_security_group.deployer.id]
-  source_dest_check           = false # NAT に必須
+  source_dest_check           = false # Required for NAT.
   associate_public_ip_address = true
   key_name                    = var.key_name != "" ? var.key_name : null
   iam_instance_profile        = aws_iam_instance_profile.deployer.name
+  user_data_replace_on_change = true
+
+  metadata_options {
+    http_tokens = "required"
+  }
 
   user_data = <<-EOF
     #!/bin/bash
@@ -142,7 +147,7 @@ resource "aws_instance" "deployer" {
     %{if var.enable_frontend_deploy}
     # ===== Frontend Build & Deploy =====
     dnf install -y git
-    curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+    curl -fsSL https://rpm.nodesource.com/setup_24.x | bash -
     dnf install -y nodejs
 
     cd /tmp
@@ -151,7 +156,8 @@ resource "aws_instance" "deployer" {
 
     # Write env vars for Vite
     %{for key, value in var.frontend_env_vars~}
-    printf '%s=%s\n' '${key}' '${value}' >> .env
+    printf '%s\n' ${jsonencode(base64encode("${key}=${value}"))} | base64 --decode >> .env
+    printf '\n' >> .env
     %{endfor~}
     chmod 600 .env
 

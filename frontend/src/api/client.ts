@@ -6,7 +6,7 @@ const apiClient = axios.create({
 
 let tokenGetter: (() => Promise<string | null>) | null = null;
 
-export function setTokenGetter(getter: () => Promise<string | null>) {
+export function setTokenGetter(getter: (() => Promise<string | null>) | null) {
   tokenGetter = getter;
 }
 

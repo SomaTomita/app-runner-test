@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -13,11 +13,15 @@ COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:24-alpine
 
 RUN apk add --no-cache tini && \
     addgroup -g 1001 -S nodejs && \
     adduser -S appuser -u 1001 -G nodejs
+
+# Trust the public Amazon RDS CA bundle for verified PostgreSQL TLS.
+RUN wget -q https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -O /usr/local/share/rds-ca.crt
+ENV NODE_EXTRA_CA_CERTS=/usr/local/share/rds-ca.crt
 
 WORKDIR /app
 

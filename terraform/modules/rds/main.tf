@@ -47,9 +47,14 @@ resource "aws_db_instance" "main" {
   publicly_accessible    = false
   multi_az               = var.multi_az
 
-  backup_retention_period = 7
-  skip_final_snapshot     = var.skip_final_snapshot
-  deletion_protection     = var.deletion_protection
+  backup_retention_period   = 7
+  skip_final_snapshot       = var.skip_final_snapshot
+  final_snapshot_identifier = var.skip_final_snapshot ? null : "${var.name_prefix}-final-${random_id.snapshot.hex}"
+  deletion_protection       = var.deletion_protection
 
   tags = { Name = "${var.name_prefix}-postgres" }
+}
+
+resource "random_id" "snapshot" {
+  byte_length = 4
 }

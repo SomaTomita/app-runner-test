@@ -1,161 +1,165 @@
 # Deploy Comparison App
 
-ALB+ECS(Fargate) と App Runner を Terraform 変数1つで切り替えて比較検証するフルスタックアプリ。
+A personal learning project created while exploring deployment options for potential workplace use. It compares AWS App Runner with ALB + ECS Fargate using the same full-stack application and Terraform configuration.
 
-## Tech Stack
+The application provides sample user CRUD operations and an image gallery. It is a learning and infrastructure comparison exercise, with limitations documented in [ARCHITECTURE.md](ARCHITECTURE.md) and [SECURITY.md](SECURITY.md).
 
-| Layer    | Technology                     |
-| -------- | ------------------------------ |
-| Frontend | React + Vite + TypeScript      |
-| Backend  | Node.js + Express + TypeScript |
-| Auth     | Clerk (Google OAuth)           |
-| DB       | PostgreSQL (RDS) + Prisma      |
-| State    | zustand                        |
-| Testing  | Vitest + React Testing Library |
-| IaC      | Terraform                      |
-| CI/CD    | GitHub Actions                 |
+## Technology
 
-## Architecture
+| Layer                  | Technology                                                           |
+| ---------------------- | -------------------------------------------------------------------- |
+| Frontend               | React, Vite, TypeScript, Tailwind CSS                                |
+| Backend                | Node.js, Express, TypeScript                                         |
+| Authentication         | Clerk                                                                |
+| Database               | PostgreSQL, Prisma, Amazon RDS                                       |
+| State management       | Zustand                                                              |
+| Testing                | Vitest, React Testing Library, Supertest                             |
+| Infrastructure         | Terraform                                                            |
+| Continuous integration | GitHub Actions: lint, tests, builds, and static Terraform validation |
 
-| Mode       | 構成                                  |
-| ---------- | ------------------------------------- |
-| ECS        | CloudFront + S3 / ALB + Fargate / RDS |
-| App Runner | CloudFront + S3 / App Runner / RDS    |
+## Deployment modes
 
-詳細は [ARCHITECTURE.md](ARCHITECTURE.md) を参照。
+Set `deploy_mode` to select a configuration. CloudFront, frontend S3 storage, image S3 storage, ECR, and RDS are shared across modes.
 
-![ECS Mode](diagrams/ecs-mode.png)
-![App Runner Mode](diagrams/apprunner-mode.png)
+| Value                | Backend                    | Outbound internet access                               |
+| -------------------- | -------------------------- | ------------------------------------------------------ |
+| `ecs`                | ALB + ECS Fargate          | Public task IPs                                        |
+| `apprunner`          | App Runner + VPC Connector | Managed NAT Gateway                                    |
+| `apprunner_deployer` | App Runner + VPC Connector | EC2 instance that also builds and deploys the frontend |
 
-## Prerequisites
+![ECS architecture](diagrams/ecs-mode.png)
+![App Runner architecture with managed NAT](diagrams/apprunner-mode.png)
+![App Runner architecture with EC2 NAT](diagrams/apprunner-deployer-mode.png)
 
-- Node.js 20+
-- Docker & Docker Compose
-- Terraform 1.5+
-- AWS CLI (configured)
-- [Clerk](https://clerk.com) アカウント
+See [ARCHITECTURE.md](ARCHITECTURE.md) for traffic flow, authentication, monitoring, and operational tradeoffs. See [terraform/README.md](terraform/README.md) for infrastructure setup.
 
-## Quick Start (Local)
+## Local development
+
+Prerequisites: Node.js 24, npm, Docker with Docker Compose, and a Clerk application for frontend sign-in.
+
+Run these commands from the repository root:
 
 ```bash
-# 1. リポジトリクローン
-git clone <repo-url> && cd app-runner-test
+git clone https://github.com/SomaTomita/app-runner-test.git
+cd app-runner-test
 
-# 2. Backend 環境変数
-cp backend/.env.example backend/.env
-# DATABASE_URL, CLERK_SECRET_KEY を設定
+# Install frontend dependencies and configure its public settings.
+cd frontend
+npm ci
+cp .env.example .env
+# Set VITE_CLERK_PUBLISHABLE_KEY. Leave VITE_API_URL empty to use the Vite proxy.
+cd ..
 
-# 3. Frontend 環境変数
-cp frontend/.env.example frontend/.env
-# VITE_CLERK_PUBLISHABLE_KEY, VITE_API_URL を設定
-
-# 4. DB + Backend 起動
+# Start PostgreSQL and the development backend.
 docker compose up -d
 
-# 5. DB マイグレーション & シード
+# Create the database schema and load sample users.
 docker compose exec backend npx prisma migrate dev
 docker compose exec backend npx prisma db seed
 
-# 6. Frontend 起動
+# Start the frontend at http://localhost:5173.
 cd frontend
-npm install && npm run dev
+npm run dev
 ```
 
-## Deploy to AWS
+Docker Compose supplies the backend database URL and enables development mode. Without Clerk backend keys, development mode bypasses API authentication; both PostgreSQL and the backend are bound to localhost. The frontend still requires Clerk sign-in. Use sample data only.
+
+For a backend running outside Docker, provide the environment variables below, generate Prisma Client, and run `npm run dev` from `backend/`. The server reads process environment variables; copying an environment file alone does not load it into the server process.
+
+## Environment variables
+
+### Backend
+
+| Variable                | Purpose                                                             |
+| ----------------------- | ------------------------------------------------------------------- |
+| `DATABASE_URL`          | PostgreSQL connection URL; required                                 |
+| `CLERK_PUBLISHABLE_KEY` | Clerk application publishable key                                   |
+| `CLERK_SECRET_KEY`      | Clerk server secret; keep private                                   |
+| `ALLOWED_USER_IDS`      | Comma-separated Clerk user IDs permitted to access the API          |
+| `NODE_ENV`              | `development`, `test`, or `production`                              |
+| `PORT`                  | HTTP port; defaults to `3000`                                       |
+| `STORAGE_TYPE`          | `local` for sample files or `s3` for AWS storage                    |
+| `S3_IMAGES_BUCKET`      | Image bucket used in S3 mode                                        |
+| `AWS_REGION`            | AWS region; defaults to `ap-northeast-1`                            |
+| `BASE_URL`              | Base URL for local image links; defaults to `http://localhost:3000` |
+| `CORS_ORIGINS`          | Comma-separated allowed browser origins                             |
+
+Production startup requires both Clerk keys and `ALLOWED_USER_IDS`. Only allowlisted users may use protected API endpoints. These users share the sample records; the app does not implement separate accounts or tenants in its database.
+
+### Frontend
+
+| Variable                     | Purpose                                                         |
+| ---------------------------- | --------------------------------------------------------------- |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Public Clerk application key; required                          |
+| `VITE_API_URL`               | Backend origin; leave empty for Vite or CloudFront API proxying |
+
+Vite embeds `VITE_*` values in the browser bundle. Put only public configuration in these variables.
+
+## Checks without AWS resources
 
 ```bash
-cd terraform
+# Repository lint and formatting checks.
+npm ci
+npm run lint
+npm run format:check
 
-# 1. 変数設定
-cp terraform.tfvars.example terraform.tfvars
-# deploy_mode, clerk_secret_key 等を編集
-
-# 2. デプロイモード選択
-#    terraform.tfvars 内で切り替え:
-#    deploy_mode = "ecs"        # ALB + ECS Fargate
-#    deploy_mode = "apprunner"  # App Runner
-
-# 3. Terraform 実行
-terraform init
-terraform plan
-terraform apply
-```
-
-## Deploy Commands (CI/CD)
-
-| Workflow               | Trigger      | Description                       |
-| ---------------------- | ------------ | --------------------------------- |
-| `ci.yml`               | Push / PR    | Lint, Type check, Test, Build     |
-| `deploy-ecs.yml`       | Push to main | ECR push + ECS service update     |
-| `deploy-apprunner.yml` | Push to main | ECR push + App Runner update      |
-| `deploy-frontend.yml`  | Push to main | S3 sync + CloudFront invalidation |
-
-## Project Structure
-
-```
-app-runner-test/
-├── frontend/          # React + Vite
-├── backend/           # Express API + Prisma (data/images/, scripts/ を含む)
-├── terraform/         # IaC (modules: vpc, rds, ecr, ecs, apprunner, s3_cdn, s3_images, monitoring)
-├── .github/workflows/ # CI/CD
-├── diagrams/          # Architecture diagrams (awsdac)
-├── docker-compose.yml # Local dev
-└── ARCHITECTURE.md    # Detailed architecture doc
-```
-
-## Useful Commands
-
-```bash
-# ローカル開発
-docker compose up -d              # DB + Backend
-docker compose down               # 停止
-
-# Backend
+# Backend checks; Prisma generation does not require a database connection.
 cd backend
-npm run dev                       # 開発サーバー
-npm test                          # テスト実行
-npm run test:watch                # テスト (watch mode)
-npx prisma studio                 # DB GUI
-npx prisma migrate dev            # マイグレーション
+npm ci
+npx prisma generate
+npm test
+npm run lint
+npm run build
+cd ..
 
-# Frontend
+# Frontend checks.
 cd frontend
-npm run dev                       # Vite dev server
-npm run build                     # 本番ビルド
-npm test                          # テスト実行
-npm run test:watch                # テスト (watch mode)
+npm ci
+npm test
+npm run lint
+npm run build
+cd ..
 
-# Terraform
-cd terraform
-terraform plan                    # 差分確認
-terraform apply                   # デプロイ
-terraform destroy                 # 全削除
-aws ssm start-session \
-  --target $(terraform output -raw deployer_instance_id)  # Deployer EC2 に接続
-
-# Sample images を S3 にアップロード
-./backend/scripts/upload-images.sh <S3_BUCKET_NAME>
-
-# Architecture diagrams
-awsdac diagrams/ecs-mode.yaml -o diagrams/ecs-mode.png
-awsdac diagrams/apprunner-mode.yaml -o diagrams/apprunner-mode.png
+# Static Terraform checks only; these do not create AWS resources.
+terraform -chdir=terraform fmt -check -recursive
+terraform -chdir=terraform init -backend=false
+terraform -chdir=terraform validate
+# Terraform 1.7+ supports these plans with mock providers and no AWS calls.
+terraform -chdir=terraform test
 ```
 
-## Environment Variables
+Tests mock database, storage, and authentication dependencies. They do not establish that an AWS deployment works. CI runs checks only and does not deploy infrastructure.
 
-### Backend (`backend/.env`)
+## Optional AWS deployment
 
-| Variable           | Description                    |
-| ------------------ | ------------------------------ |
-| `DATABASE_URL`     | PostgreSQL 接続文字列          |
-| `CLERK_SECRET_KEY` | Clerk シークレットキー         |
-| `PORT`             | サーバーポート (default: 3000) |
-| `S3_IMAGES_BUCKET` | 画像用 S3 バケット名           |
-| `AWS_REGION`       | AWS リージョン                 |
+Deployment incurs AWS charges and requires a separate, deliberate setup. This repository can be studied and tested locally without creating any AWS resources.
 
-### Frontend (`frontend/.env`)
+Before using the Terraform configuration, read [the setup guide](terraform/README.md) and [the learning environment limitations](ARCHITECTURE.md#learning-environment-limitations). Build and push the backend image to ECR before creating a service that references it. Run Prisma migrations from a trusted environment with network access to RDS. Automated deployment workflows are not included.
 
-| Variable                     | Description            |
-| ---------------------------- | ---------------------- |
-| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk パブリッシュキー |
-| `VITE_API_URL`               | Backend API の URL     |
+## Useful commands
+
+Run commands from the indicated directory:
+
+| Directory           | Command                                               | Purpose                                       |
+| ------------------- | ----------------------------------------------------- | --------------------------------------------- |
+| Repository root     | `docker compose down`                                 | Stop local containers                         |
+| Backend or frontend | `npm test`                                            | Run tests once                                |
+| Backend or frontend | `npm run test:watch`                                  | Watch tests during development                |
+| Backend             | `npx prisma studio`                                   | Open the database UI                          |
+| Backend             | `npx prisma migrate dev`                              | Create or apply development migrations        |
+| Backend             | `npx prisma migrate deploy`                           | Apply committed migrations to a deployment    |
+| Repository root     | `./backend/scripts/upload-images.sh <S3_BUCKET_NAME>` | Upload sample images to an existing S3 bucket |
+
+## Repository structure
+
+```text
+app-runner-test/
+├── frontend/             # React UI, API client, stores, and component tests
+├── backend/              # Express API, Prisma schema, sample images, and tests
+├── terraform/            # Infrastructure modules and environment presets
+├── .github/workflows/    # Checks without AWS deployment
+├── diagrams/             # English diagram definitions and rendered PNG files
+├── docker-compose.yml    # Local PostgreSQL and backend
+├── ARCHITECTURE.md       # Design and operational limitations
+└── SECURITY.md           # Security model and disclosure guidance
+```

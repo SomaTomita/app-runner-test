@@ -11,6 +11,7 @@ export function UserList() {
   const deleteUser = useUserStore((s) => s.deleteUser);
   const [form, setForm] = useState<CreateUserInput>({ email: "", name: "" });
   const [showForm, setShowForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -18,9 +19,17 @@ export function UserList() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createUser(form);
-    setForm({ email: "", name: "" });
-    setShowForm(false);
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await createUser(form);
+      setForm({ email: "", name: "" });
+      setShowForm(false);
+    } catch {
+      // Keep the input visible so the user can correct or retry it.
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -84,6 +93,7 @@ export function UserList() {
             />
             <button
               type="submit"
+              disabled={submitting}
               className="rounded-lg bg-primary-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-150 hover:bg-primary-700 active:bg-primary-800"
             >
               Create

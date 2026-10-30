@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  application:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+            frontend/package-lock.json
+      - name: Install dependencies without lifecycle scripts
+        run: |
+          npm ci --ignore-scripts
+          npm ci --ignore-scripts --prefix backend
+          npm ci --ignore-scripts --prefix frontend
+      - name: Generate Prisma Client
+        working-directory: backend
+        run: npx prisma generate
+      - name: Lint and check formatting
+        run: |
+          npm run lint
+          npm run format:check
+      - name: Check backend
+        working-directory: backend
+        run: |
+          npm test
+          npm run lint
+          npm run build
+          npm audit --audit-level=moderate
+      - name: Check frontend
+        working-directory: frontend
+        run: |
+          npm test
+          npm run lint
+          npm run build
+          npm audit --audit-level=moderate
+      - name: Audit repository tooling
+        run: npm audit --audit-level=moderate
+      - name: Build backend container without starting it
+        run: docker build --tag learning-backend:ci backend
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.5
+      - name: Check formatting
+        run: terraform -chdir=terraform fmt -check -recursive
+      - name: Validate without AWS access or remote state
+        run: |
+          terraform -chdir=terraform init -backend=false -input=false
+          terraform -chdir=terraform validate -no-color
+          terraform -chdir=terraform test -no-color
+          terraform -chdir=terraform/bootstrap init -backend=false -input=false
+          terraform -chdir=terraform/bootstrap validate -no-color
