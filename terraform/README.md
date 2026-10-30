@@ -80,7 +80,7 @@ Provide secrets through a secure shell or CI environment, such as `TF_VAR_db_pas
 
 Set `cors_origins` to the actual browser origins if calling the backend across origins. A comma-separated list of explicit HTTPS origins is appropriate for a deployed frontend. The default CloudFront setup proxies `/api/*` from the same origin.
 
-For `apprunner_deployer`, also set `deployer_git_repo_url` to an accessible repository and include `VITE_CLERK_PUBLISHABLE_KEY` in `deployer_frontend_env_vars`. Only public browser configuration belongs in this map. The EC2 build has no private Git authentication configured.
+For `apprunner_deployer`, also set `deployer_git_repo_url` to an accessible repository; the frontend inherits `clerk_publishable_key` unless overridden through `deployer_frontend_env_vars`. Only public browser configuration belongs in this map. The EC2 build has no private Git authentication configured.
 
 ## Plan and deployment
 
@@ -93,9 +93,9 @@ terraform plan -var-file=environments/dev.tfvars
 terraform apply -var-file=environments/dev.tfvars
 ```
 
-The first deployment needs an ECR repository and an uploaded image before ECS or App Runner can start. Provision ECR in a separate bootstrap step if needed. The backend image does not run database migrations automatically; run `prisma migrate deploy` separately from an environment that can reach RDS and trust its CA certificates.
+The first deployment needs an ECR repository and an uploaded image before ECS or App Runner can start. Follow [the deployment sequence](../docs/DEPLOYMENT.md) to bootstrap ECR, publish a Linux AMD64 image, and then apply the full configuration. The production container runs `prisma migrate deploy` before starting its HTTP server. It does not reset or seed data.
 
-The PostgreSQL URL uses verified TLS. The backend Docker image installs the public RDS CA bundle. Other migration clients need an equivalent trust configuration.
+RDS resolves an available version matching `rds_engine_version` (default major prefix `16`), rather than relying on an old hardcoded minor release. The PostgreSQL URL uses verified TLS with an explicit CA file. The backend Docker image installs the public RDS CA bundle. Other migration clients need an equivalent trust configuration.
 
 ## Modules
 

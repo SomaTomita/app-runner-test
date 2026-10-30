@@ -1,5 +1,8 @@
 # Mock providers keep these plans entirely local: no AWS credentials or resources.
 mock_provider "aws" {
+  mock_data "aws_rds_engine_version" {
+    defaults = { version_actual = "16.99" }
+  }
   mock_resource "aws_apprunner_service" {
     defaults = {
       arn         = "arn:aws:apprunner:ap-northeast-1:123456789012:service/learning-backend/test-service-id"

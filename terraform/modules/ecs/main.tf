@@ -243,7 +243,7 @@ resource "aws_ecs_service" "backend" {
   deployment_minimum_healthy_percent = 100
   deployment_maximum_percent         = 200
 
-  depends_on = [aws_lb_listener.http]
+  depends_on = [aws_lb_listener.http, aws_iam_role_policy_attachment.ecs_task_execution, aws_iam_role_policy.ecs_task_s3]
 
   tags = { Name = "${var.name_prefix}-backend" }
 }

@@ -6,6 +6,8 @@ output "vpc_id" {
 output "public_subnet_ids" {
   description = "Public subnet IDs"
   value       = aws_subnet.public[*].id
+  # Consumers may pull ECR images or run internet-dependent user data immediately.
+  depends_on = [aws_route_table_association.public]
 }
 
 output "private_subnet_ids" {

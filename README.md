@@ -128,13 +128,18 @@ terraform -chdir=terraform validate
 terraform -chdir=terraform test
 ```
 
-Tests mock database, storage, and authentication dependencies. They do not establish that an AWS deployment works. CI runs checks only and does not deploy infrastructure.
+Unit tests mock database, storage, and authentication dependencies. CI also starts the production Docker image against a disposable local PostgreSQL database to check migrations, startup, CRUD, access rejection, and repeat startup. CI does not deploy AWS infrastructure.
+
+```bash
+docker build --tag learning-backend:check backend
+bash scripts/check-production-container.sh learning-backend:check
+```
 
 ## Optional AWS deployment
 
 Deployment incurs AWS charges and requires a separate, deliberate setup. This repository can be studied and tested locally without creating any AWS resources.
 
-Before using the Terraform configuration, read [the setup guide](terraform/README.md) and [the learning environment limitations](ARCHITECTURE.md#learning-environment-limitations). Build and push the backend image to ECR before creating a service that references it. Run Prisma migrations from a trusted environment with network access to RDS. Automated deployment workflows are not included.
+Before using the Terraform configuration, read [the setup guide](terraform/README.md) and [the learning environment limitations](ARCHITECTURE.md#learning-environment-limitations). Build and push the backend image to ECR before creating a service that references it. The production container applies committed migrations before starting. Follow [the deployment sequence](docs/DEPLOYMENT.md) for ECR bootstrapping, AMD64 image publishing, infrastructure creation, and frontend delivery. Automated AWS deployment workflows are not included.
 
 ## Useful commands
 

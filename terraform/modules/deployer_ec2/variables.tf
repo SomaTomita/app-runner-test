@@ -26,7 +26,7 @@ variable "allowed_security_group_id" {
 variable "instance_type" {
   description = "EC2 instance type for deployer/NAT"
   type        = string
-  default     = "t3.nano"
+  default     = "t3.small"
 }
 
 variable "key_name" {

@@ -102,6 +102,7 @@ resource "aws_apprunner_auto_scaling_configuration_version" "main" {
 # ===== App Runner Service =====
 
 resource "aws_apprunner_service" "backend" {
+  depends_on   = [aws_iam_role_policy_attachment.apprunner_ecr, aws_iam_role_policy.apprunner_s3]
   service_name = "${var.name_prefix}-backend"
 
   source_configuration {
