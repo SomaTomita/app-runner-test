@@ -40,6 +40,12 @@ variable "instance_class" {
   default     = "db.t3.micro"
 }
 
+variable "engine_version" {
+  description = "PostgreSQL version or major prefix; select an available matching version in the region"
+  type        = string
+  default     = "16"
+}
+
 variable "multi_az" {
   description = "Enable Multi-AZ deployment"
   type        = bool

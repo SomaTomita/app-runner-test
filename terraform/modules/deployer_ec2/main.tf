@@ -114,6 +114,7 @@ resource "aws_iam_instance_profile" "deployer" {
 
 # --- EC2 Instance (deployer + NAT) ---
 resource "aws_instance" "deployer" {
+  depends_on                  = [aws_iam_role_policy_attachment.deployer_ssm, aws_iam_role_policy.deployer_frontend]
   ami                         = data.aws_ssm_parameter.al2023.value
   instance_type               = var.instance_type
   subnet_id                   = var.public_subnet_id
@@ -126,6 +127,17 @@ resource "aws_instance" "deployer" {
 
   metadata_options {
     http_tokens = "required"
+  }
+
+  lifecycle {
+    precondition {
+      condition     = !var.enable_frontend_deploy || length(trimspace(var.git_repo_url)) > 0
+      error_message = "Frontend deployment requires an accessible git_repo_url."
+    }
+    precondition {
+      condition     = !var.enable_frontend_deploy || length(trimspace(lookup(var.frontend_env_vars, "VITE_CLERK_PUBLISHABLE_KEY", ""))) > 0
+      error_message = "Frontend deployment requires VITE_CLERK_PUBLISHABLE_KEY."
+    }
   }
 
   user_data = <<-EOF
@@ -150,7 +162,7 @@ resource "aws_instance" "deployer" {
     curl -fsSL https://rpm.nodesource.com/setup_24.x | bash -
     dnf install -y nodejs
 
-    cd /tmp
+    cd /opt
     git clone --branch "${var.git_branch}" --depth 1 "${var.git_repo_url}" app
     cd app/frontend
 
@@ -173,7 +185,7 @@ resource "aws_instance" "deployer" {
     cat > /opt/deploy-frontend.sh << 'DEPLOY'
     #!/bin/bash
     set -euo pipefail
-    cd /tmp/app && git pull
+    cd /opt/app && git pull --ff-only
     cd frontend && npm ci && npm run build
     aws s3 sync dist/ s3://${var.frontend_bucket_name}/ --delete
     aws cloudfront create-invalidation --distribution-id ${var.cloudfront_distribution_id} --paths "/*"

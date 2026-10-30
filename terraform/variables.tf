@@ -79,6 +79,12 @@ variable "rds_instance_class" {
   default     = "db.t3.micro"
 }
 
+variable "rds_engine_version" {
+  description = "PostgreSQL version or major prefix to resolve against available regional RDS versions"
+  type        = string
+  default     = "16"
+}
+
 variable "rds_multi_az" {
   description = "Enable Multi-AZ for RDS"
   type        = bool
@@ -170,7 +176,7 @@ variable "apprunner_min_size" {
 variable "deployer_instance_type" {
   description = "EC2 instance type for deployer/NAT"
   type        = string
-  default     = "t3.nano"
+  default     = "t3.small"
 }
 
 variable "deployer_key_name" {

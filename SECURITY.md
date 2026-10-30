@@ -32,4 +32,4 @@ Use the repository's private vulnerability reporting feature when available. If 
 
 ## Verification scope
 
-Automated checks cover source linting, tests with mocked dependencies, builds, dependency audits, and static Terraform validation. They do not create AWS resources or confirm the behavior of a live deployment. Secret files are excluded from code review; a review cannot certify their contents or any external deployment configuration.
+Automated checks cover source linting, unit tests with mocked dependencies, production-container checks against disposable local PostgreSQL, builds, dependency audits, and static Terraform validation. They do not create AWS resources or confirm the behavior of a live deployment. Secret files are excluded from code review; a review cannot certify their contents or any external deployment configuration.

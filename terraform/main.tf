@@ -45,6 +45,7 @@ module "rds" {
   db_username           = var.db_username
   db_password           = var.db_password
   instance_class        = var.rds_instance_class
+  engine_version        = var.rds_engine_version
   multi_az              = var.rds_multi_az
   skip_final_snapshot   = var.rds_skip_final_snapshot
   deletion_protection   = var.rds_deletion_protection
@@ -126,7 +127,10 @@ module "deployer_ec2" {
   cloudfront_distribution_id = module.s3_cdn.distribution_id
   git_repo_url               = var.deployer_git_repo_url
   git_branch                 = var.deployer_git_branch
-  frontend_env_vars          = merge({ VITE_API_URL = "" }, var.deployer_frontend_env_vars)
+  frontend_env_vars = merge({
+    VITE_API_URL               = ""
+    VITE_CLERK_PUBLISHABLE_KEY = var.clerk_publishable_key
+  }, var.deployer_frontend_env_vars)
 }
 
 # ===== Monitoring (Alarms + Dashboard) =====

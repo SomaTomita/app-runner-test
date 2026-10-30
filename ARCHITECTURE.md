@@ -69,7 +69,7 @@ Return traffic -> internet gateway -> EC2 connection tracking -> VPC Connector -
 
 RDS traffic does not pass through the NAT instance. The instance is a single point of failure for internet access. It uses IMDSv2 and supports SSM Session Manager. SSH is disabled unless both a key pair and allowed CIDRs are supplied.
 
-Frontend build configuration is written to an environment file during instance initialization. Values are encoded before shell interpolation. Changing user data replaces the instance, so review changes carefully. The rebuild script is stored at `/opt/deploy-frontend.sh`; its checkout is under `/tmp/app`, which is not durable storage.
+Frontend build configuration is written to an environment file during instance initialization. Values are encoded before shell interpolation. Changing user data replaces the instance, so review changes carefully. The rebuild script is stored at `/opt/deploy-frontend.sh`; its checkout is under `/opt/app` on the instance root volume. The default deployer size is `t3.small` to provide memory for the frontend build.
 
 ## Resource selection and scaling
 
@@ -136,7 +136,7 @@ The PostgreSQL driver pool is limited to five connections per application instan
 
 RDS uses encrypted storage, seven-day backup retention, and private subnet placement. Instance size, Multi-AZ, storage autoscaling, deletion protection, and final snapshot behavior are configurable. A final snapshot identifier is generated when snapshots are enabled.
 
-Run migrations separately from a trusted client with RDS network access. The runtime container does not include a migration job or automatically seed data.
+The production container includes Prisma CLI and migration files, and runs `prisma migrate deploy` before accepting HTTP requests. Failed migrations prevent startup. It does not reset or seed data. Prisma generation explicitly targets CommonJS with JavaScript import extensions, matching the compiled Node.js application.
 
 ## Security groups and storage
 
@@ -187,7 +187,7 @@ ECS uses rolling updates with minimum healthy capacity of 100% and maximum capac
 
 GitHub Actions runs lint, formatting, backend/frontend tests and builds, dependency audits, and static Terraform checks. The workflow has read-only repository permissions and no AWS credentials or deployment step.
 
-A future deployment workflow would need deliberate approval, image publishing, migrations from a network-reachable runner, service updates, and frontend deployment. Those operations are not implemented by CI.
+[The deployment guide](docs/DEPLOYMENT.md) specifies the initial ECR bootstrap, Linux AMD64 image publishing, full infrastructure apply, and frontend delivery. AWS deployment operations are not implemented by CI.
 
 ## Tests
 
@@ -196,7 +196,7 @@ A future deployment workflow would need deliberate approval, image publishing, m
 | Frontend | jsdom       | Vitest, React Testing Library, user-event |
 | Backend  | Node.js     | Vitest, Supertest                         |
 
-Tests live next to implementation files as `*.test.ts` or `*.test.tsx`. Most route/component tests mock database, storage, or Clerk dependencies. Additional regression tests cover access restrictions and error handling. These are not live AWS or PostgreSQL integration tests.
+Tests live next to implementation files as `*.test.ts` or `*.test.tsx`. Most route/component tests mock database, storage, or Clerk dependencies. Additional regression tests cover access restrictions and error handling. CI additionally runs the production container against a real disposable local PostgreSQL database to verify migrations, startup, CRUD, access rejection, and repeat startup. These are not live AWS integration tests.
 
 See [README.md](README.md#checks-without-aws-resources) for commands. Prisma Client must be generated before backend compilation and tests that import the user service.
 
@@ -220,17 +220,17 @@ Use `terraform init -backend=false` for static local checks. Use `terraform init
 
 ## Learning environment limitations
 
-| Area              | Current behavior                                                                                | Before using real workloads                                     |
-| ----------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| Secrets           | Plain runtime environment values are recorded in Terraform state and service/task configuration | Use Secrets Manager or SSM references and restrict state access |
-| ALB transport     | HTTP-only listener and HTTP origin traffic                                                      | Add ACM, HTTPS, and suitable origin restrictions                |
-| Authorization     | Explicit allowlist with shared sample records                                                   | Define roles, ownership, and tenant boundaries                  |
-| Local development | API auth bypass without Clerk keys; public sample image path                                    | Keep localhost binding and use synthetic data                   |
-| EC2 NAT           | Single instance and availability zone; temporary frontend checkout                              | Design failover, durable build artifacts, and recovery          |
-| API size          | User/image lists have no API pagination; no rate limiting                                       | Add limits appropriate to the workload                          |
-| Monitoring        | Optional SNS destination; App Runner retention unmanaged                                        | Configure notification delivery and log retention               |
-| Deployment        | Static CI checks; no live deployment test or automatic migrations                               | Add an approved deployment path and integration checks          |
-| State             | A shared default backend key                                                                    | Isolate environment state explicitly                            |
+| Area              | Current behavior                                                                                | Before using real workloads                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Secrets           | Plain runtime environment values are recorded in Terraform state and service/task configuration | Use Secrets Manager or SSM references and restrict state access     |
+| ALB transport     | HTTP-only listener and HTTP origin traffic                                                      | Add ACM, HTTPS, and suitable origin restrictions                    |
+| Authorization     | Explicit allowlist with shared sample records                                                   | Define roles, ownership, and tenant boundaries                      |
+| Local development | API auth bypass without Clerk keys; public sample image path                                    | Keep localhost binding and use synthetic data                       |
+| EC2 NAT           | Single instance and availability zone; frontend checkout on the instance volume                 | Design failover, durable build artifacts, and recovery              |
+| API size          | User/image lists have no API pagination; no rate limiting                                       | Add limits appropriate to the workload                              |
+| Monitoring        | Optional SNS destination; App Runner retention unmanaged                                        | Configure notification delivery and log retention                   |
+| Deployment        | Local production-image/PostgreSQL checks and startup migrations; no live AWS test               | Add an approved AWS deployment pipeline and live integration checks |
+| State             | A shared default backend key                                                                    | Isolate environment state explicitly                                |
 
 Cost comparisons depend on region, uptime, traffic, provisioned resources, and data transfer. Managed NAT adds its own charges; EC2 NAT adds instance and public IPv4 costs. No cost estimate here should be treated as a current AWS quote.
 

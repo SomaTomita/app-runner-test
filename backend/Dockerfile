@@ -29,6 +29,9 @@ COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+COPY --chmod=755 scripts/start-production.sh ./scripts/start-production.sh
 
 RUN chown -R appuser:nodejs /app
 USER appuser
@@ -40,4 +43,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "dist/server.js"]
+CMD ["./scripts/start-production.sh"]

@@ -27,10 +27,16 @@ resource "aws_security_group" "rds" {
   }
 }
 
+data "aws_rds_engine_version" "postgres" {
+  engine  = "postgres"
+  version = var.engine_version
+  latest  = true
+}
+
 resource "aws_db_instance" "main" {
   identifier     = "${var.name_prefix}-postgres"
   engine         = "postgres"
-  engine_version = "16.4"
+  engine_version = data.aws_rds_engine_version.postgres.version_actual
   instance_class = var.instance_class
 
   allocated_storage     = 20

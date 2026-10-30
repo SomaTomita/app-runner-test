@@ -13,7 +13,7 @@ locals {
   cloudfront_domain = "https://${module.s3_cdn.cloudfront_domain_name}"
 
   # DATABASE_URL construction
-  database_url = "postgresql://${urlencode(var.db_username)}:${urlencode(var.db_password)}@${module.rds.endpoint}/${var.db_name}?sslmode=verify-full"
+  database_url = "postgresql://${urlencode(var.db_username)}:${urlencode(var.db_password)}@${module.rds.endpoint}/${var.db_name}?sslmode=verify-full&sslaccept=strict&sslrootcert=/usr/local/share/rds-ca.crt"
 
   # ECR image URI
   backend_image_uri = "${module.ecr.repository_url}:${var.backend_image_tag}"
